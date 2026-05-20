@@ -2,8 +2,8 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<title>CursorGift</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"/>
+<title>CursorGift v3.1</title><!-- BUILD:2026-05-20-v3 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -64,10 +64,10 @@ a{text-decoration:none}
 
 /* ── LAYOUT ── */
 .app{display:flex;flex-direction:column;min-height:100dvh;max-width:430px;margin:0 auto}
-.page{overflow-y:auto;padding-bottom:76px;min-height:100dvh}
+.page{overflow-y:auto;padding-bottom:80px;min-height:100dvh}
 
 /* ── NAV ── */
-.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(5,5,12,.97);backdrop-filter:blur(28px);border-top:1px solid rgba(255,255,255,.06);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom,0)}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(8,8,16,.85);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);border-top:1px solid rgba(124,92,255,.2);box-shadow:0 -1px 0 rgba(124,92,255,.1),0 -20px 40px rgba(0,0,0,.3);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom,0)}
 .nb{flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;transition:transform .12s}
 .nb:active{transform:scale(.9)}
 .npip{position:absolute;top:0;left:50%;transform:translateX(-50%);width:26px;height:2px;border-radius:2px;background:linear-gradient(90deg,#7c5cff,#a480ff);box-shadow:0 0 10px #7c5cff}
@@ -205,7 +205,7 @@ let TG_USER = null;
 
 function initTgUser() {
   if (tg) {
-    tg.ready(); tg.expand();
+    tg.ready(); tg.expand(); if(tg.requestFullscreen) tg.requestFullscreen(); tg.enableClosingConfirmation();
     const u = tg.initDataUnsafe?.user;
     if (u) TG_USER = { id: u.id, name: [u.first_name, u.last_name].filter(Boolean).join(' '), username: u.username ? '@'+u.username : '', photo: u.photo_url||null, isPremium: u.is_premium||false, initials: ((u.first_name||'?')[0]+(u.last_name||'')[0]).toUpperCase().slice(0,2) };
   }
@@ -265,7 +265,28 @@ function connectWS() {
       }
     };
     ws.onmessage = e => {
-      try { const m=JSON.parse(e.data); if(m.type==='online'){onlineCount=m.count;onlineUsers=m.users||[];document.querySelectorAll('.online-count').forEach(el=>el.textContent=onlineCount);} } catch(e){}
+      try {
+        const m = JSON.parse(e.data);
+        if (m.type==='online') {
+          onlineCount=m.count; onlineUsers=m.users||[];
+          document.querySelectorAll('.online-count').forEach(el=>el.textContent=onlineCount);
+        }
+        if (m.type==='prices') {
+          // Реальное обновление с WS — обновляем цены и мини-графики
+          m.ton_usd && (tonUsd=m.ton_usd);
+          const wasCount=GIFTS.length, oldSlugs=new Set(GIFTS.map(g=>g.slug));
+          (m.collections||[]).forEach(c=>{
+            const prev=prices[c.slug]?.floor;
+            prices[c.slug]={floor:c.floor,change24h:c.change24h,vol24h:c.vol24h,listed:c.listed,supply:c.supply,sales24h:c.sales24h,marketCap:c.marketCap,prevFloor:prev||c.floor,updated:Date.now()};
+            if(!histories[c.slug])histories[c.slug]=[];
+            histories[c.slug].push({time:Date.now(),price:c.floor});
+            if(histories[c.slug].length>8640)histories[c.slug].shift();
+          });
+          GIFTS=(m.collections||[]).map(c=>({slug:c.slug,name:c.name,photo:c.portalPhoto||thumb(c.slug),tg_id:1,isNew:!oldSlugs.has(c.slug)&&wasCount>0}));
+          updatePriceDom();
+          countdown=20;
+        }
+      } catch(e){}
     };
     ws.onclose = () => setTimeout(connectWS, 5000);
     ws.onerror = () => ws.close();
@@ -332,10 +353,20 @@ async function fetchPrices() {
 
 async function fetchHistory(slug) {
   try {
+    // Загружаем полную историю с реальными продажами
     const r = await fetch(`${PROXY_HTTP}/api/history/${slug}?hours=99999`);
     const j = await r.json();
-    if (j.history?.length>1) { const m=[...j.history,...(histories[slug]||[])].sort((a,b)=>a.time-b.time).filter((p,i,arr)=>i===0||p.time!==arr[i-1].time); histories[slug]=m; }
-  } catch(e){}
+    if (j.history?.length > 1) {
+      const sales = j.history;
+      const current = histories[slug]||[];
+      // Мержим реальные продажи с текущей историей (накопленной за сессию)
+      const merged = [...sales, ...current]
+        .sort((a,b)=>a.time-b.time)
+        .filter((p,i,arr)=>i===0||p.time!==arr[i-1].time);
+      histories[slug] = merged;
+      console.log(`[${slug}] history: ${merged.length} points, from ${new Date(merged[0].time).toLocaleDateString('ru')}`);
+    }
+  } catch(e){ console.warn('[history]', slug, e.message); }
 }
 
 function updatePriceDom() {
@@ -352,6 +383,7 @@ function updatePriceDom() {
     const dpEl=document.getElementById('dp-'+g.slug); if(dpEl)dpEl.textContent=p.floor.toFixed(2);
   });
   const tEl=document.getElementById('update-timer'); if(tEl)tEl.textContent='↻ '+countdown+'с';
+  const tonEl=document.getElementById('ton-price'); if(tonEl)tonEl.textContent='TON = $'+tonUsd.toFixed(3);
 }
 
 // ═══ CHARTS ═══
@@ -366,9 +398,17 @@ function miniChart(slug,w=84,h=28) {
 }
 
 function bigChart(slug,period) {
-  const cutoff=period>=99999?0:Date.now()-period*3600000;
-  let pts=(histories[slug]||[]).filter(p=>p.time>=cutoff);
-  if(pts.length<3)pts=(histories[slug]||[]).slice(-300);
+  const allPts = histories[slug]||[];
+  let pts;
+  if (period >= 99999) {
+    // ВСЁ — показываем от самой первой продажи
+    pts = allPts;
+  } else {
+    const cutoff = Date.now() - period*3600000;
+    pts = allPts.filter(p=>p.time>=cutoff);
+    // Если мало точек для выбранного периода — показываем что есть
+    if (pts.length < 3 && allPts.length > 0) pts = allPts.slice(-Math.min(allPts.length, 50));
+  }
   if(pts.length<2)return `<div style="height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#303050;gap:8px"><div style="font-size:26px">⏳</div><div style="font-size:13px">Накапливаем данные...</div><div style="font-size:10px">Каждые 20 сек</div></div>`;
   const W=320,H=150,st=W/(pts.length-1);
   const pa=pts.map(p=>p.price),mn=Math.min(...pa),mx=Math.max(...pa),rng=mx-mn||0.01;
@@ -454,7 +494,7 @@ function renderMarket() {
         <div style="font-size:10px;color:#303055;background:rgba(255,255,255,.05);border-radius:6px;padding:3px 9px" id="update-timer">↻ ${countdown}с</div>
       </div>
     </div>
-    <p style="font-size:11px;color:#6070a0">${GIFTS.length} коллекций · TON = $${tonUsd.toFixed(3)}</p>
+    <p style="font-size:11px;color:#6070a0">${GIFTS.length} коллекций · <span style="color:#f0b429;font-weight:700" id="ton-price">TON = ${tonUsd.toFixed(3)}</span></p>
     ${topG?`<div style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(77,159,255,.09);border:1px solid rgba(77,159,255,.2);border-radius:10px;padding:5px 11px">
       <img src="${thumb(topG.slug)}" style="width:22px;height:22px;border-radius:6px;object-fit:contain" onerror="this.style.display='none'"/>
       <div><div style="font-size:9px;color:#505080">📊 Топ объёма</div><div style="font-size:11px;font-weight:800;color:#4d9fff">${topG.name} · ${(prices[topG.slug]?.vol24h||0).toFixed(0)} TON/24ч</div></div>
@@ -504,10 +544,10 @@ ${p.sales24h>0?`<div style="position:absolute;top:8px;right:8px;z-index:2;backgr
 <div style="padding:9px 10px 10px;flex:1;display:flex;flex-direction:column;gap:7px">
   <div style="font-size:12px;font-weight:700;color:#e0e0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</div>
   <div class="price-box" style="border-radius:9px;padding:6px 8px;background:rgba(0,0,0,.28)">
-    <div style="font-size:15px;font-weight:900;color:#f0f0ff;font-variant-numeric:tabular-nums" id="pv-${g.slug}" data-prev="${p.floor}">${p.floor.toFixed(2)} <span style="font-size:9px;font-weight:500;color:#404060">TON</span></div>
+    <div style="font-size:15px;font-weight:900;color:#f0f0ff;font-variant-numeric:tabular-nums" id="pv-${g.slug}" data-prev="${p.floor}" data-open="${p.floor}">${p.floor.toFixed(2)} <span style="font-size:9px;font-weight:500;color:#404060">TON</span></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px">
-      <div style="font-size:10px;font-weight:700;color:${up?'#22d47a':'#ff4d6a'}" id="pc-${g.slug}">${up?'▲':'▼'} ${Math.abs(p.change24h)}%</div>
-      <div style="font-size:9px;color:#404060">≈ $${usd}</div>
+      <div style="font-size:10px;font-weight:700;color:${up?'#22d47a':'#ff4d6a'}" id="pc-${g.slug}">${up?'▲':'▼'} ${Math.abs(p.change24h)}% 24ч</div>
+      <div style="font-size:9px;color:#404060" id="ps-${g.slug}">${usd}</div>
     </div>
   </div>
   <div id="mc-${g.slug}" style="display:flex;justify-content:center">${miniChart(g.slug)}</div>
@@ -675,6 +715,16 @@ ${isSell?`<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255
   document.body.appendChild(overlay);
 }
 
+function connectTonWallet(){
+  // TON Connect через Telegram (нативный способ)
+  if (tg?.openLink) {
+    tg.openLink('https://app.tonkeeper.com/ton-connect');
+  } else {
+    window.open('https://t.me/wallet','_blank');
+  }
+  showToast('💎 Открываем TON Wallet', 'Подключи кошелёк для вывода NFT');
+}
+
 function confirmSell(slug){const priceEl=document.getElementById('sell-price');const sp=parseFloat(priceEl?.value||0);const g=GIFTS.find(x=>x.slug===slug);document.querySelector('.modal-overlay')?.remove();showToast('✅ Выставлено',`${g?.name} за ${sp.toFixed(2)} TON`);}
 
 // ═══ WHEEL ═══
@@ -820,31 +870,104 @@ function showWheelResult(ws,wi){
 
 // ═══ NEWS ═══
 function renderNews(){
+  // Сортируем по абсолютному изменению
   const sorted=[...GIFTS].sort((a,b)=>Math.abs(prices[b.slug]?.change24h||0)-Math.abs(prices[a.slug]?.change24h||0));
   const topUp=[...GIFTS].sort((a,b)=>(prices[b.slug]?.change24h||0)-(prices[a.slug]?.change24h||0))[0];
   const topDown=[...GIFTS].sort((a,b)=>(prices[a.slug]?.change24h||0)-(prices[b.slug]?.change24h||0))[0];
   const topVol=[...GIFTS].sort((a,b)=>(prices[b.slug]?.vol24h||0)-(prices[a.slug]?.vol24h||0))[0];
-  const ts={bullish:{c:'#22d47a',bg:'rgba(34,212,122,.05)',br:'rgba(34,212,122,.15)',l:'📈 РОСТ'},bearish:{c:'#ff4d6a',bg:'rgba(255,77,106,.05)',br:'rgba(255,77,106,.15)',l:'📉 ПАДЕНИЕ'},neutral:{c:'#4d9fff',bg:'rgba(77,159,255,.05)',br:'rgba(77,159,255,.15)',l:'📰 РЫНОК'},hot:{c:'#f0b429',bg:'rgba(240,180,41,.05)',br:'rgba(240,180,41,.15)',l:'🔥 АКТИВНОСТЬ'}};
+  const topSales=[...GIFTS].sort((a,b)=>(prices[b.slug]?.sales24h||0)-(prices[a.slug]?.sales24h||0))[0];
+
+  const ts={
+    bullish:{c:'#22d47a',bg:'rgba(34,212,122,.05)',br:'rgba(34,212,122,.15)',l:'📈 РОСТ'},
+    bearish:{c:'#ff4d6a',bg:'rgba(255,77,106,.05)',br:'rgba(255,77,106,.15)',l:'📉 ПАДЕНИЕ'},
+    neutral:{c:'#4d9fff',bg:'rgba(77,159,255,.05)',br:'rgba(77,159,255,.15)',l:'📰 РЫНОК'},
+    hot:{c:'#f0b429',bg:'rgba(240,180,41,.05)',br:'rgba(240,180,41,.15)',l:'🔥 АКТИВНОСТЬ'},
+    new:{c:'#c77dff',bg:'rgba(199,125,255,.05)',br:'rgba(199,125,255,.15)',l:'⭐ НОВЫЙ'}
+  };
   const ft=d=>{const dd=Date.now()-d;if(dd<3600000)return~~(dd/60000)+' мин';if(dd<86400000)return~~(dd/3600000)+' ч';return~~(dd/86400000)+' д';};
+
+  // Динамические новости на основе реальных данных
   const news=[];
-  if(topUp)news.push({e:'📈',t:`${topUp.name} лидирует`,b:`+${prices[topUp.slug]?.change24h||0}% · Floor: ${(prices[topUp.slug]?.floor||0).toFixed(2)} TON`,gid:topUp.slug,tp:'bullish',time:Date.now()-900000,tags:['#рост']});
-  if(topDown)news.push({e:'📉',t:`${topDown.name} — падение`,b:`${prices[topDown.slug]?.change24h||0}% · Сделок: ${prices[topDown.slug]?.sales24h||0}`,gid:topDown.slug,tp:'bearish',time:Date.now()-2400000,tags:['#коррекция']});
-  if(topVol)news.push({e:'🔥',t:`${topVol.name} — топ объём`,b:`Объём: ${(prices[topVol.slug]?.vol24h||0).toFixed(0)} TON · ${prices[topVol.slug]?.sales24h||0} сделок`,gid:topVol.slug,tp:'hot',time:Date.now()-5400000,tags:['#объём']});
-  news.push({e:'💹',t:`TON/USD = $${tonUsd.toFixed(3)}`,b:'Курс с tonapi.io · обновляется каждую минуту',gid:null,tp:'neutral',time:Date.now()-10800000,tags:['#ton']});
-  news.push({e:'👥',t:`${onlineCount} человек онлайн`,b:`Прямо сейчас в CursorGift активно ${onlineCount} пользователей`,gid:null,tp:'neutral',time:Date.now()-600000,tags:['#онлайн']});
+  
+  if(topUp){
+    const p=prices[topUp.slug]||{};
+    const ch=p.change24h||0;
+    news.push({
+      e: ch>10?'🚀':ch>5?'📈':'⬆️',
+      t:`${topUp.name} ${ch>10?'резко растёт':ch>5?'лидирует по росту':'показывает рост'}`,
+      b:`+${ch}% за 24ч · Floor: ${(p.floor||0).toFixed(2)} TON · $${((p.floor||0)*tonUsd).toFixed(0)} · Объём: ${(p.vol24h||0).toFixed(0)} TON`,
+      gid:topUp.slug, tp:'bullish', time:Date.now()-(Math.random()*1800000), tags:['#рост','#live']
+    });
+  }
+
+  if(topDown){
+    const p=prices[topDown.slug]||{};
+    const ch=p.change24h||0;
+    news.push({
+      e: ch<-15?'💥':ch<-10?'📉':'⬇️',
+      t:`${topDown.name} ${ch<-15?'сильно падает':ch<-10?'падает':'снижается'}`,
+      b:`${ch}% за 24ч · Floor: ${(p.floor||0).toFixed(2)} TON · Сделок: ${p.sales24h||0} · Listed: ${p.listed||0}`,
+      gid:topDown.slug, tp:'bearish', time:Date.now()-(Math.random()*3600000), tags:['#падение','#коррекция']
+    });
+  }
+
+  if(topVol){
+    const p=prices[topVol.slug]||{};
+    news.push({
+      e:'🔥',
+      t:`${topVol.name} — максимальный объём торгов`,
+      b:`Объём 24ч: ${(p.vol24h||0).toFixed(0)} TON ($${((p.vol24h||0)*tonUsd).toFixed(0)}) · ${p.sales24h||0} сделок · Floor ${(p.floor||0).toFixed(2)} TON`,
+      gid:topVol.slug, tp:'hot', time:Date.now()-(Math.random()*5400000), tags:['#объём','#активность']
+    });
+  }
+
+  if(topSales && topSales.slug!==topVol?.slug){
+    const p=prices[topSales.slug]||{};
+    news.push({
+      e:'💎',
+      t:`${topSales.name} — больше всего продаж`,
+      b:`${p.sales24h||0} сделок за 24ч · Floor: ${(p.floor||0).toFixed(2)} TON · Объём: ${(p.vol24h||0).toFixed(0)} TON`,
+      gid:topSales.slug, tp:'hot', time:Date.now()-(Math.random()*7200000), tags:['#продажи']
+    });
+  }
+
+  // Новые подарки
+  const newGifts=GIFTS.filter(g=>g.isNew);
+  newGifts.slice(0,2).forEach(g=>{
+    news.push({e:'🆕',t:`Новый подарок: ${g.name}`,b:`Появился на рынке · Floor: ${(prices[g.slug]?.floor||0).toFixed(2)} TON`,gid:g.slug,tp:'new',time:Date.now()-300000,tags:['#новый']});
+  });
+
+  // TON курс
+  news.push({
+    e:'💹',
+    t:`TON/USD = $${tonUsd.toFixed(3)} · ${tonUsd>2.5?'Рост':'Снижение'} курса`,
+    b:`Текущий курс обновляется каждые 30 секунд с TON API · Источник: tonapi.io`,
+    gid:null, tp:tonUsd>2.5?'bullish':'bearish', time:Date.now()-600000, tags:['#ton','#курс']
+  });
+
+  news.push({
+    e:'📊',
+    t:`Рынок: ${GIFTS.length} коллекций отслеживается`,
+    b:`Данные обновляются каждые 20 секунд с Portal Market. Общий объём: ${GIFTS.reduce((s,g)=>s+(prices[g.slug]?.vol24h||0),0).toFixed(0)} TON/24ч`,
+    gid:null, tp:'neutral', time:Date.now()-86400000, tags:['#рынок','#portal']
+  });
+
+  // Сортируем по времени (новые первые)
+  news.sort((a,b)=>b.time-a.time);
+
   document.getElementById('pg-news').innerHTML=`
 <div style="background:linear-gradient(160deg,#0a1525 0%,#080810 55%);padding:20px 16px 16px;border-bottom:1px solid rgba(77,159,255,.1);position:relative;overflow:hidden">
 <div style="position:absolute;top:-28px;left:-18px;width:110px;height:110px;background:radial-gradient(circle,rgba(77,159,255,.14) 0%,transparent 70%);border-radius:50%"></div>
 <div style="position:relative">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
-<div style="display:flex;align-items:center;gap:6px"><div style="width:6px;height:6px;border-radius:50%;background:#4d9fff;animation:pulse 2s infinite"></div><span style="font-size:10px;color:#4d9fff;font-weight:700">LIVE</span></div>
+<div style="display:flex;align-items:center;gap:6px"><div style="width:6px;height:6px;border-radius:50%;background:#4d9fff;animation:pulse 2s infinite"></div><span style="font-size:10px;color:#4d9fff;font-weight:700">LIVE · Обновляется из Portal Market</span></div>
 <div class="online-badge"><div class="online-dot"></div><span style="font-size:10px;color:#22d47a;font-weight:700"><span class="online-count">${onlineCount}</span> онлайн</span></div>
 </div>
 <h1 style="font-size:22px;font-weight:900">📰 CursorGift News</h1>
-<p style="font-size:11px;color:#5070a0;margin-top:2px">TON $${tonUsd.toFixed(3)} · ${GIFTS.length} коллекций</p>
+<p style="font-size:11px;color:#5070a0;margin-top:2px">TON $${tonUsd.toFixed(3)} · ${GIFTS.length} коллекций · Авто-обновление</p>
 </div></div>
 <div style="padding:14px 16px 0">
-<div style="font-size:10px;font-weight:700;color:#505070;margin-bottom:10px;letter-spacing:.5px">⚡ ТОП ДВИЖЕНИЯ</div>
+<div style="font-size:10px;font-weight:700;color:#505070;margin-bottom:10px;letter-spacing:.5px">⚡ ТОП ДВИЖЕНИЯ 24Ч</div>
 <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
 ${sorted.slice(0,8).map(g=>{const p=prices[g.slug]||{},up=p.change24h>=0;return`<div onclick="openDetail('${g.slug}')" style="flex:0 0 auto;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:10px 12px;text-align:center;cursor:pointer;min-width:80px;transition:transform .15s" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform=''">
 <div style="width:42px;height:42px;margin:0 auto 4px;border-radius:10px;overflow:hidden;background:rgba(0,0,0,.2)"><img src="${thumb(g.slug)}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'"/></div>
@@ -857,10 +980,15 @@ ${sorted.slice(0,8).map(g=>{const p=prices[g.slug]||{},up=p.change24h>=0;return`
 ${news.map((n,i)=>{const s=ts[n.tp],g=n.gid?GIFTS.find(x=>x.slug===n.gid):null;return`<div onclick="${g?`openDetail('${n.gid}')`:'void 0'}" style="background:${s.bg};border:1px solid ${s.br};border-radius:18px;padding:14px;margin-bottom:11px;cursor:${g?'pointer':'default'};animation:fadeUp .25s ease ${i*.07}s both">
 <div style="display:flex;align-items:flex-start;gap:10px"><div style="font-size:26px;flex-shrink:0">${n.e}</div>
 <div style="flex:1;min-width:0">
-<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap"><span style="font-size:8px;font-weight:800;letter-spacing:.5px;padding:2px 6px;border-radius:5px;color:${s.c};background:${s.c}18;border:1px solid ${s.c}25">${s.l}</span><span style="font-size:9px;color:#404060">${ft(n.time)} назад</span></div>
+<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap">
+<span style="font-size:8px;font-weight:800;letter-spacing:.5px;padding:2px 6px;border-radius:5px;color:${s.c};background:${s.c}18;border:1px solid ${s.c}25">${s.l}</span>
+<span style="font-size:9px;color:#404060">${ft(n.time)} назад · Live</span>
+</div>
 <div style="font-size:14px;font-weight:800;margin-bottom:5px;line-height:1.25">${n.t}</div>
 <div style="font-size:12px;color:#7080a0;line-height:1.5">${n.b}</div>
-${g?`<div style="display:inline-flex;align-items:center;gap:7px;margin-top:9px;background:rgba(0,0,0,.3);border-radius:9px;padding:5px 11px"><img src="${thumb(g.slug)}" style="width:26px;height:26px;object-fit:contain;border-radius:6px" onerror="this.style.display='none'"/><div><div style="font-size:10px;font-weight:700;color:#d0d0f0">${g.name}</div><div style="font-size:9px;color:#7c5cff">${(prices[g.slug]?.floor||0).toFixed(2)} TON</div></div></div>`:''}
+${g?`<div style="display:inline-flex;align-items:center;gap:7px;margin-top:9px;background:rgba(0,0,0,.3);border-radius:9px;padding:5px 11px">
+<img src="${thumb(g.slug)}" style="width:26px;height:26px;object-fit:contain;border-radius:6px" onerror="this.style.display='none'"/>
+<div><div style="font-size:10px;font-weight:700;color:#d0d0f0">${g.name}</div><div style="font-size:9px;color:#7c5cff">${(prices[g.slug]?.floor||0).toFixed(2)} TON</div></div></div>`:''}
 <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">${n.tags.map(t=>`<span style="font-size:9px;color:#5060a0;background:rgba(80,96,160,.1);padding:2px 7px;border-radius:5px">${t}</span>`).join('')}</div>
 </div></div></div>`;}).join('')}
 </div>`;
@@ -993,6 +1121,6 @@ async function init() {
 
 init();
 </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fe958025b53eebe',t:'MTc3OTI1OTE2MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
