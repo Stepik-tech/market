@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <title>CursorGift v3.1</title><!-- BUILD:2026-05-20-v3 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#080810;color:#f0f0ff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;font-size:15px;min-height:100dvh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
@@ -209,6 +210,15 @@ const PROXY_WS   = 'wss://web-production-ad0c.up.railway.app';
 const tg = window.Telegram?.WebApp;
 let TG_USER = null;
 
+// ═══ TON WALLET / USER GIFTS ═══
+const TONCONNECT_MANIFEST = 'https://stepik-tech.github.io/market/tonconnect-manifest.json';
+let tonConnectUI = null;
+let walletAddress = localStorage.getItem('cg_wallet_address') || '';
+let walletBalance = 0;
+let walletGifts = [];
+let walletLoading = false;
+let walletLastUpdate = 0;
+
 function initTgUser() {
   if (tg) {
     tg.ready();
@@ -326,7 +336,156 @@ function connectWS() {
 // ═══ SAVE PROFILE ═══
 async function saveProfile() {
   if (!TG_USER?.id) return;
-  try { await fetch(PROXY_HTTP+'/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tgId:TG_USER.id,name:TG_USER.name,username:TG_USER.username,avatar:TG_USER.photo})}); } catch(e){}
+  try {
+    await fetch(PROXY_HTTP+'/api/profile',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        tgId:TG_USER.id,
+        name:TG_USER.name,
+        username:TG_USER.username,
+        avatar:TG_USER.photo,
+        walletAddress:walletAddress||null,
+        walletBalance:Number(walletBalance||0),
+        gifts:walletGifts.map(g=>({address:g.address,name:g.name,image:g.image,collection:g.collection,url:g.url})).slice(0,100)
+      })
+    });
+  } catch(e){}
+}
+
+// ═══ TON CONNECT / WALLET BALANCE / TELEGRAM GIFTS ═══
+function esc(v){
+  return String(v ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+}
+function shortAddr(a){
+  a=String(a||'');
+  return a.length>14 ? a.slice(0,6)+'…'+a.slice(-6) : (a||'—');
+}
+function fmtTon(v, d=3){
+  const n = Number(v||0);
+  return n > 0 ? n.toFixed(d).replace(/\.?(0+)$/,'') : '0';
+}
+function profileGiftList(){ return walletGifts || []; }
+function isTelegramGiftNft(n){
+  const meta=n?.metadata||{};
+  const col=n?.collection||{};
+  const blob=[meta.name,meta.description,meta.image,meta.content_url,meta.external_url,col.name,col.description,n?.address].filter(Boolean).join(' ').toLowerCase();
+  return (blob.includes('telegram') && blob.includes('gift')) || blob.includes('fragment.com/gift') || blob.includes('nft.fragment.com');
+}
+function normalizeWalletGift(n){
+  const meta=n?.metadata||{};
+  const img = meta.image || meta.preview || meta.content_url || n?.previews?.[2]?.url || n?.previews?.[1]?.url || n?.previews?.[0]?.url || '';
+  const addr = n?.address || '';
+  return {
+    type:'wallet',
+    address: addr,
+    name: meta.name || n?.dns || 'Telegram Gift',
+    image: img,
+    collection: n?.collection?.name || 'Telegram NFT',
+    description: meta.description || '',
+    url: meta.external_url || (addr ? 'https://getgems.io/nft/'+addr : '#'),
+    floor: 0
+  };
+}
+async function initTonConnect(){
+  if (tonConnectUI) return tonConnectUI;
+  try {
+    const UI = window.TON_CONNECT_UI;
+    if (!UI?.TonConnectUI) return null;
+    tonConnectUI = new UI.TonConnectUI({ manifestUrl: TONCONNECT_MANIFEST });
+    tonConnectUI.onStatusChange(wallet => handleTonWallet(wallet));
+    if (tonConnectUI.wallet) handleTonWallet(tonConnectUI.wallet);
+    return tonConnectUI;
+  } catch(e) {
+    console.warn('[tonconnect]', e.message);
+    return null;
+  }
+}
+function handleTonWallet(wallet){
+  const address = wallet?.account?.address || '';
+  if (address) {
+    walletAddress = address;
+    localStorage.setItem('cg_wallet_address', walletAddress);
+    loadWalletData(true);
+  } else {
+    walletAddress=''; walletBalance=0; walletGifts=[]; walletLastUpdate=0;
+    localStorage.removeItem('cg_wallet_address');
+    if (curTab==='prof') renderProfile();
+    if (curTab==='market') renderMarket();
+  }
+}
+async function connectTonWallet(){
+  const ui = await initTonConnect();
+  if (ui?.openModal) {
+    ui.openModal();
+    return;
+  }
+  // Fallback, если SDK не загрузился (например, в sandbox preview без сети)
+  if (tg?.openLink) tg.openLink('https://app.tonkeeper.com/ton-connect');
+  else window.open('https://app.tonkeeper.com/ton-connect','_blank');
+  showToast('💎 TON Connect', 'Открой в браузере/Telegram, чтобы подключить кошелёк');
+}
+async function disconnectTonWallet(){
+  try { await tonConnectUI?.disconnect?.(); } catch(e){}
+  walletAddress=''; walletBalance=0; walletGifts=[]; walletLastUpdate=0;
+  localStorage.removeItem('cg_wallet_address');
+  saveProfile();
+  if (curTab==='prof') renderProfile();
+  if (curTab==='market') renderMarket();
+}
+async function refreshWalletData(){ await loadWalletData(true); }
+async function loadWalletData(force=false){
+  if (!walletAddress || walletLoading) return;
+  if (!force && Date.now()-walletLastUpdate < 45000) return;
+  walletLoading = true;
+  if (curTab==='prof') renderProfile();
+  try {
+    const [acc,nfts] = await Promise.allSettled([
+      fetch('https://tonapi.io/v2/accounts/'+encodeURIComponent(walletAddress), {cache:'no-store'}).then(r=>r.ok?r.json():null),
+      fetch('https://tonapi.io/v2/accounts/'+encodeURIComponent(walletAddress)+'/nfts?limit=1000&offset=0', {cache:'no-store'}).then(r=>r.ok?r.json():null)
+    ]);
+    const account = acc.status==='fulfilled' ? acc.value : null;
+    walletBalance = Number(account?.balance || 0) / 1e9;
+    if (!Number.isFinite(walletBalance) || walletBalance < 0) walletBalance = 0;
+    const items = (nfts.status==='fulfilled' ? (nfts.value?.nft_items || nfts.value?.items || []) : []);
+    walletGifts = items.filter(isTelegramGiftNft).map(normalizeWalletGift);
+    walletLastUpdate = Date.now();
+    saveProfile();
+  } catch(e) {
+    console.warn('[wallet]', e.message);
+    walletBalance = 0;
+    walletGifts = [];
+  }
+  walletLoading = false;
+  if (curTab==='prof') renderProfile();
+  if (curTab==='market') renderMarket();
+}
+function walletCardHtml(){
+  if (!walletAddress) {
+    return `<div style="margin:14px 16px 0;background:linear-gradient(135deg,rgba(77,159,255,.12),rgba(124,92,255,.08));border:1px solid rgba(77,159,255,.25);border-radius:16px;padding:14px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(77,159,255,.12);display:flex;align-items:center;justify-content:center;font-size:22px">💎</div>
+        <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;color:#f0f0ff">TON-кошелёк не подключён</div><div style="font-size:11px;color:#7080a0;margin-top:2px">Подключи Tonkeeper / Wallet, чтобы увидеть баланс и подарки</div></div>
+      </div>
+      <button onclick="connectTonWallet()" style="margin-top:12px;width:100%;padding:12px;border-radius:13px;background:linear-gradient(135deg,#4d9fff,#7c5cff);color:#fff;font-size:13px;font-weight:800;box-shadow:0 6px 20px rgba(77,159,255,.25)">🔗 Подключить кошелёк</button>
+    </div>`;
+  }
+  return `<div style="margin:14px 16px 0;background:linear-gradient(135deg,rgba(34,212,122,.10),rgba(124,92,255,.07));border:1px solid rgba(34,212,122,.22);border-radius:16px;padding:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div style="min-width:0"><div style="font-size:10px;color:#22d47a;font-weight:800;letter-spacing:.5px">КОШЕЛЁК ПОДКЛЮЧЁН</div><div style="font-size:13px;font-weight:800;color:#d0d0f0;margin-top:3px;font-family:monospace">${esc(shortAddr(walletAddress))}</div></div>
+      <div style="text-align:right"><div style="font-size:22px;font-weight:900;color:#f0b429">${fmtTon(walletBalance,4)}</div><div style="font-size:10px;color:#606080">TON баланс</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">
+      <div style="background:rgba(255,255,255,.04);border-radius:11px;padding:8px;text-align:center"><div style="font-size:13px;font-weight:900;color:#a480ff">${walletGifts.length}</div><div style="font-size:9px;color:#606080">подарков</div></div>
+      <button onclick="refreshWalletData()" style="background:rgba(77,159,255,.10);border:1px solid rgba(77,159,255,.22);border-radius:11px;padding:8px;text-align:center;color:#4d9fff;font-size:10px;font-weight:800">${walletLoading?'⏳':'↻'} Обновить</button>
+      <button onclick="disconnectTonWallet()" style="background:rgba(255,77,106,.09);border:1px solid rgba(255,77,106,.20);border-radius:11px;padding:8px;text-align:center;color:#ff4d6a;font-size:10px;font-weight:800">Отключить</button>
+    </div>
+    <div style="font-size:9px;color:#505070;margin-top:9px">Если средств нет — баланс показывается как 0 TON.</div>
+  </div>`;
+}
+function marketWalletButtonHtml(){
+  if (walletAddress) return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(34,212,122,.08);border:1px solid rgba(34,212,122,.22);border-radius:10px;padding:6px 11px;color:#22d47a;font-size:11px;font-weight:800">💎 ${fmtTon(walletBalance,3)} TON · ${esc(shortAddr(walletAddress))}</button>`;
+  return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(124,92,255,.10);border:1px solid rgba(124,92,255,.28);border-radius:10px;padding:6px 11px;color:#a480ff;font-size:11px;font-weight:800">🔗 Подключить кошелёк</button>`;
 }
 
 // ═══ NFT ATTRS ═══
@@ -534,6 +693,7 @@ function renderMarket() {
       </div>
     </div>
     <p style="font-size:11px;color:#6070a0">${GIFTS.length} коллекций · <span style="color:#f0b429;font-weight:700" id="ton-price">TON = ${tonUsd.toFixed(3)}</span></p>
+    ${marketWalletButtonHtml()}
     ${topG?`<div style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(77,159,255,.09);border:1px solid rgba(77,159,255,.2);border-radius:10px;padding:5px 11px">
       <img src="${thumb(topG.slug)}" style="width:22px;height:22px;border-radius:6px;object-fit:contain" onerror="this.style.display='none'"/>
       <div><div style="font-size:9px;color:#505080">📊 Топ объёма</div><div style="font-size:11px;font-weight:800;color:#4d9fff">${topG.name} · ${(prices[topG.slug]?.vol24h||0).toFixed(0)} TON/24ч</div></div>
@@ -752,16 +912,6 @@ ${isSell?`<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255
 <button onclick="this.closest('.modal-overlay').remove()" style="width:100%;padding:12px;border-radius:14px;color:#505070;font-size:13px;margin-top:10px">Отмена</button>
 </div>`;
   document.body.appendChild(overlay);
-}
-
-function connectTonWallet(){
-  // TON Connect через Telegram (нативный способ)
-  if (tg?.openLink) {
-    tg.openLink('https://app.tonkeeper.com/ton-connect');
-  } else {
-    window.open('https://t.me/wallet','_blank');
-  }
-  showToast('💎 Открываем TON Wallet', 'Подключи кошелёк для вывода NFT');
 }
 
 function confirmSell(slug){const priceEl=document.getElementById('sell-price');const sp=parseFloat(priceEl?.value||0);const g=GIFTS.find(x=>x.slug===slug);document.querySelector('.modal-overlay')?.remove();showToast('✅ Выставлено',`${g?.name} за ${sp.toFixed(2)} TON`);}
@@ -1035,8 +1185,7 @@ ${g?`<div style="display:inline-flex;align-items:center;gap:7px;margin-top:9px;b
 
 // ═══ PROFILE ═══
 function renderProfile(){
-  const inv=[...GIFTS].sort((a,b)=>(prices[b.slug]?.floor||0)-(prices[a.slug]?.floor||0)).slice(0,6);
-  const portfolio=inv.reduce((s,g)=>s+(prices[g.slug]?.floor||0),0);
+  const inv=profileGiftList();
   const u=TG_USER||{};
   document.getElementById('pg-prof').innerHTML=`<div style="animation:fadeIn .25s ease">
 <div style="background:linear-gradient(145deg,#150830 0%,#0a0518 60%,#080810 100%);padding:0;position:relative;overflow:hidden;border-bottom:1px solid rgba(124,92,255,.15)">
@@ -1050,28 +1199,29 @@ ${u.isPremium?`<div style="position:absolute;bottom:-3px;right:-3px;background:l
 <div style="position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#22d47a;border:2px solid #080810;box-shadow:0 0 6px #22d47a"></div>
 </div>
 <div style="flex:1;min-width:0">
-${u.id?`<div style="font-size:22px;font-weight:900;color:#f0f0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.name}</div>
-${u.username?`<div style="font-size:13px;color:#7c5cff;margin-top:2px;font-weight:600">${u.username}</div>`:''}
-<div style="font-size:10px;color:#404060;margin-top:2px;font-family:monospace">ID ${u.id}</div>`
+${u.id?`<div style="font-size:22px;font-weight:900;color:#f0f0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.name)}</div>
+${u.username?`<div style="font-size:13px;color:#7c5cff;margin-top:2px;font-weight:600">${esc(u.username)}</div>`:''}
+<div style="font-size:10px;color:#404060;margin-top:2px;font-family:monospace">ID ${esc(u.id)}</div>`
 :`<div style="font-size:16px;font-weight:700;color:#808090">Открой в Telegram</div><div style="font-size:12px;color:#505070;margin-top:3px">для отображения профиля</div>`}
 <div style="display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:4px 10px;border-radius:8px;${u.isPremium?'background:rgba(240,180,41,.15);border:1px solid rgba(240,180,41,.3)':'background:rgba(124,92,255,.12);border:1px solid rgba(124,92,255,.25)'}">
 <span style="font-size:13px">${u.isPremium?'⭐':'🎁'}</span>
-<span style="font-size:10px;font-weight:700;color:${u.isPremium?'#f0b429':'#a480ff'}">${u.isPremium?'Telegram Premium':'CursorGift'}</span>
+<span style="font-size:10px;font-weight:700;color:${u.isPremium?'#f0b429':'#a480ff'}">${u.isPremium?'Telegram Premium':'Telegram Mini App'}</span>
 </div>
 </div></div>
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-${[['💼',portfolio.toFixed(1)+' TON','#f0b429','Портфель'],['🎡','0','#22d47a','Апгрейдов'],['📊',GIFTS.length,'#7c5cff','На рынке']].map(([ic,v,c,l])=>`<div style="background:rgba(255,255,255,.06);border-radius:14px;padding:12px 8px;text-align:center;border:1px solid rgba(255,255,255,.07)"><div style="font-size:18px;margin-bottom:4px">${ic}</div><div style="font-size:13px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:#505070;margin-top:2px">${l}</div></div>`).join('')}
+${[['💎',fmtTon(walletBalance,3)+' TON','#f0b429','Баланс'],['🎁',inv.length,'#22d47a','Подарки'],['📊',GIFTS.length,'#7c5cff','На рынке']].map(([ic,v,c,l])=>`<div style="background:rgba(255,255,255,.06);border-radius:14px;padding:12px 8px;text-align:center;border:1px solid rgba(255,255,255,.07)"><div style="font-size:18px;margin-bottom:4px">${ic}</div><div style="font-size:13px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:#505070;margin-top:2px">${l}</div></div>`).join('')}
 </div></div></div>
+${walletCardHtml()}
 <div style="padding:14px 16px 0">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:#505070;letter-spacing:.5px">👥 СЕЙЧАС В ПРИЛОЖЕНИИ</div><div style="font-size:10px;color:#22d47a;font-weight:700">${onlineCount} чел.</div></div>
 <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px">
 ${onlineCount===0?`<div style="color:#404060;font-size:12px;padding:8px 0">Ты первый сегодня! 🎉</div>`:
 onlineUsers.slice(0,12).map(usr=>`<div style="flex:0 0 auto;text-align:center">
 <div style="width:46px;height:46px;border-radius:50%;overflow:hidden;margin:0 auto 4px;border:2px solid rgba(34,212,122,.35);box-shadow:0 0 10px rgba(34,212,122,.18)">
-${usr.avatar?`<img src="${usr.avatar}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.background='linear-gradient(135deg,#7c5cff,#4d9fff)';this.parentElement.innerHTML='<span style=font-size:18px;line-height:46px;color:#fff>'+(usr.name||'?')[0].toUpperCase()+'</span>'"/>`
-:`<div style="width:100%;height:100%;background:linear-gradient(135deg,#7c5cff,#4d9fff);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff">${(usr.name||'?')[0].toUpperCase()}</div>`}
+${usr.avatar?`<img src="${esc(usr.avatar)}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.background='linear-gradient(135deg,#7c5cff,#4d9fff)';this.parentElement.innerHTML='<span style=font-size:18px;line-height:46px;color:#fff>'+(usr.name||'?')[0].toUpperCase()+'</span>'"/>`
+:`<div style="width:100%;height:100%;background:linear-gradient(135deg,#7c5cff,#4d9fff);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff">${esc((usr.name||'?')[0].toUpperCase())}</div>`}
 </div>
-<div style="font-size:9px;color:#606080;max-width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(usr.name||'User').split(' ')[0]}</div>
+<div style="font-size:9px;color:#606080;max-width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((usr.name||'User').split(' ')[0])}</div>
 </div>`).join('')}
 ${onlineCount>12?`<div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#606080">+${onlineCount-12}</div></div>`:''}
 </div></div>
@@ -1084,7 +1234,7 @@ ${[['inv','🎁 Подарки'],['wheel','🎡 Игры'],['settings','⚙️ �
 
 function switchPTab(t){
   ['inv','wheel','settings'].forEach(x=>{const b=document.getElementById('ptb-'+x);if(b){b.style.borderBottom=t===x?'2px solid #7c5cff':'2px solid transparent';b.style.color=t===x?'#a480ff':'#505070';}});
-  const inv=[...GIFTS].sort((a,b)=>(prices[b.slug]?.floor||0)-(prices[a.slug]?.floor||0)).slice(0,6);
+  const inv=profileGiftList();
   const el=document.getElementById('ptcontent');if(!el)return;
   if(t==='inv')el.innerHTML=pInv(inv);
   else if(t==='wheel')el.innerHTML=`<div style="animation:fadeIn .2s ease"><div style="background:rgba(255,255,255,.03);border-radius:18px;padding:24px;text-align:center;border:1px solid rgba(255,255,255,.06)"><div style="font-size:42px;margin-bottom:12px">🎡</div><div style="font-size:16px;font-weight:700;color:#a480ff;margin-bottom:6px">История игр</div><div style="font-size:12px;color:#505070;margin-bottom:16px">Сыграй в Колесо Апгрейда!</div><button onclick="go('wheel')" style="padding:12px 24px;border-radius:14px;background:linear-gradient(135deg,#7c5cff,#5c3dff);color:#fff;font-size:13px;font-weight:700;box-shadow:0 4px 16px rgba(124,92,255,.4)">🎡 Открыть</button></div></div>`;
@@ -1092,16 +1242,35 @@ function switchPTab(t){
 }
 
 function pInv(inv){
+  if (!walletAddress) {
+    return `<div style="animation:fadeIn .2s ease;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:26px 18px;text-align:center">
+      <div style="font-size:42px;margin-bottom:12px">🎁</div>
+      <div style="font-size:16px;font-weight:800;color:#a480ff;margin-bottom:6px">Подключи кошелёк</div>
+      <div style="font-size:12px;color:#606080;line-height:1.6;margin-bottom:16px">После подключения мы покажем твои Telegram Gifts/NFT из TON-кошелька. Если подарков нет — список будет пустым.</div>
+      <button onclick="connectTonWallet()" style="padding:12px 22px;border-radius:14px;background:linear-gradient(135deg,#4d9fff,#7c5cff);color:#fff;font-size:13px;font-weight:800">🔗 Подключить кошелёк</button>
+    </div>`;
+  }
+  if (walletLoading) {
+    return `<div style="text-align:center;padding:28px;color:#606080"><div style="font-size:24px;margin-bottom:8px;animation:spin 1.5s linear infinite;display:inline-block">⏳</div><div style="font-size:13px">Загружаем баланс и подарки...</div></div>`;
+  }
+  if (!inv.length) {
+    return `<div style="animation:fadeIn .2s;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:26px 18px;text-align:center">
+      <div style="font-size:42px;margin-bottom:12px">📭</div>
+      <div style="font-size:16px;font-weight:800;color:#d0d0f0;margin-bottom:6px">Подарков не найдено</div>
+      <div style="font-size:12px;color:#606080;line-height:1.6;margin-bottom:16px">В этом TON-кошельке не найдено Telegram Gifts. Баланс: <b style="color:#f0b429">${fmtTon(walletBalance,4)} TON</b>.</div>
+      <button onclick="refreshWalletData()" style="padding:10px 18px;border-radius:12px;background:rgba(77,159,255,.12);border:1px solid rgba(77,159,255,.25);color:#4d9fff;font-size:12px;font-weight:800">↻ Проверить ещё раз</button>
+    </div>`;
+  }
   return `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;animation:fadeIn .2s ease">
-${inv.map((g,i)=>`<div onclick="openDetail('${g.slug}')" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:16px;overflow:hidden;cursor:pointer;animation:fadeUp .25s ease ${i*.07}s both">
-<div style="width:100%;padding-bottom:80%;position:relative;background:rgba(0,0,0,.2)"><img src="${getCardImg(g)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;image-rendering:-webkit-optimize-contrast" onerror="this.style.opacity=.2"/></div>
+${inv.map((g,i)=>`<div onclick="window.open('${esc(g.url||'#')}','_blank')" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:16px;overflow:hidden;cursor:pointer;animation:fadeUp .25s ease ${i*.07}s both">
+<div style="width:100%;padding-bottom:80%;position:relative;background:rgba(0,0,0,.2)">${g.image?`<img src="${esc(g.image)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;image-rendering:-webkit-optimize-contrast" onerror="this.style.opacity=.2"/>`:`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:34px">🎁</div>`}</div>
 <div style="padding:9px 10px 11px">
-<div style="font-size:12px;font-weight:700;color:#d0d0f0;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</div>
-<div style="font-size:13px;color:#f0b429;font-weight:800">${(prices[g.slug]?.floor||0).toFixed(2)} TON</div>
-<div style="font-size:9px;color:#505070;margin-top:1px">≈ $${((prices[g.slug]?.floor||0)*tonUsd).toFixed(0)}</div>
+<div style="font-size:12px;font-weight:700;color:#d0d0f0;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(g.name)}</div>
+<div style="font-size:10px;color:#7c5cff;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(g.collection)}</div>
+<div style="font-size:9px;color:#505070;margin-top:4px;font-family:monospace">${esc(shortAddr(g.address))}</div>
 <div style="display:flex;gap:6px;margin-top:8px">
-<button onclick="event.stopPropagation();openGiftAction('${g.slug}','sell')" style="flex:1;padding:5px;border-radius:8px;background:rgba(34,212,122,.12);border:1px solid rgba(34,212,122,.25);color:#22d47a;font-size:9px;font-weight:700">💰 Продать</button>
-<button onclick="event.stopPropagation();openGiftAction('${g.slug}','withdraw')" style="flex:1;padding:5px;border-radius:8px;background:rgba(77,159,255,.1);border:1px solid rgba(77,159,255,.25);color:#4d9fff;font-size:9px;font-weight:700">📤 Вывод</button>
+<button onclick="event.stopPropagation();window.open('${esc(g.url||'#')}','_blank')" style="flex:1;padding:6px;border-radius:8px;background:rgba(124,92,255,.12);border:1px solid rgba(124,92,255,.25);color:#a480ff;font-size:9px;font-weight:700">Открыть ↗</button>
+<button onclick="event.stopPropagation();openGiftAction('${GIFTS[0]?.slug||'gift'}','withdraw')" style="flex:1;padding:6px;border-radius:8px;background:rgba(77,159,255,.1);border:1px solid rgba(77,159,255,.25);color:#4d9fff;font-size:9px;font-weight:700">Вывод</button>
 </div></div></div>`).join('')}
 </div>`;
 }
@@ -1118,6 +1287,10 @@ function pSettings(){
 <div style="font-size:10px;color:#505070;font-weight:700;margin-bottom:12px;letter-spacing:.5px">ДАННЫЕ</div>
 ${[['🔗 Источник цен','Portal Market'],['⏱ Обновление','Каждые 20 сек'],['📊 Коллекций',String(GIFTS.length)],['💱 TON/USD','$'+tonUsd.toFixed(3)]].map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0">${v}</span></div>`).join('')}
 </div>
+<div style="background:rgba(255,255,255,.03);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.06)">
+<div style="font-size:10px;color:#505070;font-weight:700;margin-bottom:12px;letter-spacing:.5px">КОШЕЛЁК</div>
+${[['💎 Адрес',walletAddress?shortAddr(walletAddress):'не подключён'],['💰 Баланс',fmtTon(walletBalance,4)+' TON'],['🎁 Telegram Gifts',String(walletGifts.length)],['🕒 Обновлено',walletLastUpdate?new Date(walletLastUpdate).toLocaleTimeString('ru'):'—']].map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:12px"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0;text-align:right">${esc(v)}</span></div>`).join('')}
+</div>
 <a href="https://fragment.com/gifts" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#808090;font-size:13px;font-weight:700">🔗 Fragment.com</a>
 </div>`;
 }
@@ -1125,8 +1298,10 @@ ${[['🔗 Источник цен','Portal Market'],['⏱ Обновление',
 // ═══ INIT ═══
 async function init() {
   initTgUser();
+  initTonConnect();
   scheduleSplashAutoClick();
   setTimeout(saveProfile, 2500);
+  if (walletAddress) setTimeout(()=>loadWalletData(true), 1200);
   const st=document.getElementById('sstat');
 
   const statuses=['Подключаемся к Portal Market...','Получаем цены...','Загружаем коллекции...'];
@@ -1161,5 +1336,6 @@ async function init() {
 init();
 </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fe96e403a04eebe',t:'MTc3OTI2MDA3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9feafc74c8b8bbc3',t:'MTc3OTI3NjM4Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
