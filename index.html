@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#080810"/>
+<meta name="theme-color" content="#080810"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <title>CursorGift v3.1</title><!-- BUILD:2026-05-20-v3 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 <style>
@@ -63,11 +69,11 @@ a{text-decoration:none}
 @keyframes marketIn{0%{opacity:0;transform:translateY(18px)}100%{opacity:1;transform:translateY(0)}}
 
 /* ── LAYOUT ── */
-.app{display:flex;flex-direction:column;min-height:100dvh;max-width:430px;margin:0 auto}
+.app{display:flex;flex-direction:column;min-height:100dvh;width:100%;max-width:100%;margin:0}
 .page{overflow-y:auto;padding-bottom:80px;min-height:100dvh}
 
 /* ── NAV ── */
-.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(8,8,16,.85);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);border-top:1px solid rgba(124,92,255,.2);box-shadow:0 -1px 0 rgba(124,92,255,.1),0 -20px 40px rgba(0,0,0,.3);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom,0)}
+.nav{position:fixed;bottom:0;left:0;right:0;width:100%;background:rgba(10,10,20,.92);-webkit-backdrop-filter:blur(30px) saturate(200%);backdrop-filter:blur(30px) saturate(200%);border-top:1px solid rgba(124,92,255,.25);box-shadow:0 -1px 0 rgba(124,92,255,.15),0 -16px 40px rgba(0,0,0,.5);display:flex;z-index:9999;padding-bottom:env(safe-area-inset-bottom,0);transform:none}
 .nb{flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;transition:transform .12s}
 .nb:active{transform:scale(.9)}
 .npip{position:absolute;top:0;left:50%;transform:translateX(-50%);width:26px;height:2px;border-radius:2px;background:linear-gradient(90deg,#7c5cff,#a480ff);box-shadow:0 0 10px #7c5cff}
@@ -160,7 +166,7 @@ a{text-decoration:none}
 </div>
 
 <!-- ═══ APP ═══ -->
-<div id="main" style="display:none;flex:1;flex-direction:column">
+<div id="main" style="display:none;flex:1;flex-direction:column;width:100%">
   <div class="page" id="pg-market"></div>
   <div class="page" id="pg-news" style="display:none"></div>
   <div class="page" id="pg-prof" style="display:none"></div>
@@ -205,13 +211,37 @@ let TG_USER = null;
 
 function initTgUser() {
   if (tg) {
-    tg.ready(); tg.expand(); if(tg.requestFullscreen) tg.requestFullscreen(); tg.enableClosingConfirmation();
+    tg.ready();
+    tg.expand();
+    // iOS Telegram: requestFullscreen только если поддерживается
+    try { if(tg.requestFullscreen) tg.requestFullscreen(); } catch(e){}
+    try { tg.enableClosingConfirmation(); } catch(e){}
+    
     const u = tg.initDataUnsafe?.user;
-    if (u) TG_USER = { id: u.id, name: [u.first_name, u.last_name].filter(Boolean).join(' '), username: u.username ? '@'+u.username : '', photo: u.photo_url||null, isPremium: u.is_premium||false, initials: ((u.first_name||'?')[0]+(u.last_name||'')[0]).toUpperCase().slice(0,2) };
+    if (u && u.id) {
+      const firstName = u.first_name || '';
+      const lastName = u.last_name || '';
+      const fullName = [firstName, lastName].filter(Boolean).join(' ');
+      const initials = (firstName[0]||'')+(lastName[0]||'');
+      
+      TG_USER = {
+        id: u.id,
+        name: fullName || 'Пользователь',
+        username: u.username ? '@'+u.username : '',
+        photo: u.photo_url || null,
+        isPremium: u.is_premium || false,
+        initials: initials.toUpperCase().slice(0,2) || '??',
+        color: ['#7c5cff','#ff6eb4','#4d9fff','#22d47a','#f0b429','#ff4d6a'][u.id % 6],
+        // Генерируем цвет аватара по id если нет фото
+        color: ['#7c5cff','#ff6eb4','#4d9fff','#22d47a','#f0b429','#ff4d6a'][u.id % 6]
+      };
+    }
   }
-  if (!TG_USER) TG_USER = { id:0, name:'Гость', username:'', photo:null, isPremium:false, initials:'👤' };
+  if (!TG_USER || !TG_USER.id) {
+    TG_USER = { id:0, name:'Гость', username:'', photo:null, isPremium:false, initials:'🎁', color:'#7c5cff' };
+  }
   const el = document.getElementById('splash-user');
-  if (el && TG_USER.id) el.textContent = 'Привет, ' + TG_USER.name + '!';
+  if (el && TG_USER.id) el.textContent = 'Привет, ' + TG_USER.name + '! 👋';
 }
 
 // ═══ SPLASH LOGIC ═══
@@ -441,7 +471,16 @@ ${gs}
 
 // ═══ HELPERS ═══
 function showToast(title,body){const t=document.createElement('div');t.className='toast';t.innerHTML=`<div><div style="font-size:11px;font-weight:800;color:#fff">${title}</div><div style="font-size:10px;color:rgba(255,255,255,.7)">${body}</div></div>`;document.body.appendChild(t);setTimeout(()=>t.style.opacity='0',3500);setTimeout(()=>t.remove(),4000);}
-function avatarHtml(size=40){if(TG_USER?.photo)return`<img src="${TG_USER.photo}" class="avatar" style="width:${size}px;height:${size}px" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="avatar-ph" style="display:none;width:${size}px;height:${size}px;font-size:${size*.4}px">${TG_USER.initials||'👤'}</div>`;return`<div class="avatar-ph" style="width:${size}px;height:${size}px;font-size:${size*.38}px">${TG_USER?.initials||'👤'}</div>`;}
+function avatarHtml(size=40){
+  const u = TG_USER||{};
+  const col = u.color||'#7c5cff';
+  const fs = Math.round(size*.38);
+  const ph = `<div class="avatar-ph" style="width:${size}px;height:${size}px;font-size:${fs}px;background:linear-gradient(135deg,${col},${col}99)">${u.initials||'🎁'}</div>`;
+  if(u.photo){
+    return `<img src="${u.photo}" class="avatar" style="width:${size}px;height:${size}px" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="avatar-ph" style="display:none;width:${size}px;height:${size}px;font-size:${fs}px;background:linear-gradient(135deg,${col},${col}99)">${u.initials||'🎁'}</div>`;
+  }
+  return ph;
+}
 function spawnConfetti(){const cols=['#7c5cff','#22d47a','#f0b429','#ff6eb4','#4d9fff','#ff4d6a','#fff'];for(let i=0;i<40;i++){setTimeout(()=>{const c=document.createElement('div');c.className='conf';c.style.cssText=`left:${Math.random()*100}vw;top:${Math.random()*25}vh;background:${cols[~~(Math.random()*cols.length)]};animation-duration:${.8+Math.random()*.9}s;animation-delay:${Math.random()*.25}s`;document.body.appendChild(c);setTimeout(()=>c.remove(),1600);},i*50);}}
 function loadLottie(cid,url){const el=document.getElementById(cid);if(!el||typeof lottie==='undefined')return;if(lotties[cid]){try{lotties[cid].destroy();}catch(e){}delete lotties[cid];}try{lotties[cid]=lottie.loadAnimation({container:el,renderer:'svg',loop:true,autoplay:true,path:url});lotties[cid].addEventListener('data_failed',()=>{if(el)el.innerHTML=`<img src="${url.replace('.lottie.json','.webp')}" style="width:100%;height:100%;object-fit:contain;border-radius:inherit" onerror="this.src='${url.replace(/gift\/.+$/,'')}'"/>`;});}catch(e){if(el)el.innerHTML=`<img src="${url.replace('.lottie.json','.webp')}" style="width:100%;height:100%;object-fit:contain"/>`;}}
 
@@ -1121,6 +1160,6 @@ async function init() {
 
 init();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fe958025b53eebe',t:'MTc3OTI1OTE2MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fe96e403a04eebe',t:'MTc3OTI2MDA3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
