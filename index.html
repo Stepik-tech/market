@@ -590,7 +590,36 @@ function fmtTon(v, d=3){
   const n = Number(v||0);
   return n > 0 ? n.toFixed(d).replace(/\.?(0+)$/,'') : '0';
 }
-function profileGiftList(){ return walletGifts || []; }
+function getTestGifts(){
+  try { return JSON.parse(localStorage.getItem('cg_test_gifts') || '[]') || []; }
+  catch(e){ return []; }
+}
+function saveTestGifts(list){
+  try { localStorage.setItem('cg_test_gifts', JSON.stringify(list || [])); } catch(e){}
+}
+function addTestGift(){
+  const exists = getTestGifts();
+  const gift = {
+    type:'test',
+    address:'TEST-'+Date.now(),
+    name:'Test CRT Gift',
+    collection:'CursorGift Test Inventory',
+    image:'',
+    url:'#',
+    test:true
+  };
+  saveTestGifts([gift, ...exists].slice(0,5));
+  showToast('🎁 Тестовый подарок добавлен','Теперь можно проверить CRT Upgrade');
+  if (curTab==='wheel') { resetWheelCrtState(); renderWheel(); }
+  if (curTab==='prof') renderProfile();
+}
+function clearTestGifts(){
+  saveTestGifts([]);
+  showToast('🧹 Тестовые подарки удалены','Инвентарь очищен');
+  if (curTab==='wheel') { resetWheelCrtState(); renderWheel(); }
+  if (curTab==='prof') renderProfile();
+}
+function profileGiftList(){ return [...(walletGifts || []), ...getTestGifts()]; }
 function isTelegramGiftNft(n){
   const meta=n?.metadata||{};
   const col=n?.collection||{};
@@ -1216,17 +1245,18 @@ function renderCrtStakeMini(){
   </div>`;
 }
 function renderCrtScreen(){
-  const noWallet = !walletAddress;
+  const testGifts = getTestGifts();
+  const noWallet = !walletAddress && !testGifts.length;
   const stakes = getWheelStakeItems();
   const off = wheelStage==='result' ? 'crt-off' : '';
   const stat = wheelStage==='target' ? 'crt-static' : '';
   let inner='';
   if(noWallet){
-    inner = `${renderCrtHeader()}<div class="crt-empty"><div class="big">📺</div><h3>КОШЕЛЁК НЕ ПОДКЛЮЧЁН</h3><p>Терминал апгрейда видит только подарки из твоего TON-кошелька. Подключи кошелёк, чтобы выбрать подарок.</p><button class="crt-connect" onclick="connectTonWallet()">🔗 Подключить кошелёк</button></div>`;
+    inner = `${renderCrtHeader()}<div class="crt-empty"><div class="big">📺</div><h3>КОШЕЛЁК НЕ ПОДКЛЮЧЁН</h3><p>Терминал апгрейда видит подарки из TON-кошелька. Для проверки можно выдать тестовый подарок.</p><button class="crt-connect" onclick="connectTonWallet()">🔗 Подключить кошелёк</button><button class="crt-connect" style="margin-left:8px;background:linear-gradient(135deg,#22d47a,#4d9fff);color:#00130a" onclick="addTestGift()">🎁 Выдать тест</button></div>`;
   } else if(!stakes.length){
-    inner = `${renderCrtHeader()}<div class="crt-empty"><div class="big">📭</div><h3>ИНВЕНТАРЬ ПУСТ</h3><p>В подключённом кошельке не найдено Telegram Gifts. Баланс: ${fmtTon(walletBalance,4)} TON.</p><button class="crt-connect" onclick="refreshWalletData()">↻ Обновить инвентарь</button></div>`;
+    inner = `${renderCrtHeader()}<div class="crt-empty"><div class="big">📭</div><h3>ИНВЕНТАРЬ ПУСТ</h3><p>В подключённом кошельке не найдено Telegram Gifts. Баланс: ${fmtTon(walletBalance,4)} TON. Можно выдать тестовый подарок для проверки.</p><button class="crt-connect" onclick="refreshWalletData()">↻ Обновить</button><button class="crt-connect" style="margin-left:8px;background:linear-gradient(135deg,#22d47a,#4d9fff);color:#00130a" onclick="addTestGift()">🎁 Выдать тест</button></div>`;
   } else if(wheelStage==='idle'){
-    inner = `${renderCrtHeader()}<div class="crt-terminal-sub">Выбери подарок ниже. После выбора монитор поймает сигнал, покажет помехи и предложит цель апгрейда.</div><div style="margin-top:18px;font-size:10px;color:#5affb4;line-height:1.8">&gt; INVENTORY: ${stakes.length} GIFTS<br>&gt; WALLET: ${esc(shortAddr(walletAddress))}<br>&gt; STATUS: READY</div>`;
+    inner = `${renderCrtHeader()}<div class="crt-terminal-sub">Выбери подарок ниже. После выбора монитор поймает сигнал, покажет помехи и предложит цель апгрейда.</div><div style="margin-top:18px;font-size:10px;color:#5affb4;line-height:1.8">&gt; INVENTORY: ${stakes.length} GIFTS<br>&gt; WALLET: ${esc(walletAddress ? shortAddr(walletAddress) : 'TEST MODE')}<br>&gt; STATUS: READY</div>`;
   } else if(wheelStage==='target'){
     const targets=getWheelTargets();
     inner = `${renderCrtHeader()}${renderCrtStakeMini()}<div class="crt-terminal-sub">Помехи прошли. Теперь выбери, что хочешь получить за обмен:</div><div class="crt-targets">${targets.map(t=>`<div class="crt-target" onclick="selectWheelTarget('${t.slug}')"><div class="crt-target-row"><img src="${t.image}" onerror="this.style.opacity=.25"><div style="min-width:0;flex:1"><div class="crt-target-name">${esc(t.name)}</div><div class="crt-target-price">${t.floor.toFixed(2)} TON</div></div></div></div>`).join('')}</div>`;
@@ -1242,8 +1272,8 @@ function renderCrtScreen(){
 }
 function renderWheelInventory(){
   const stakes=getWheelStakeItems();
-  if(!walletAddress || !stakes.length) return '';
-  return `<div class="crt-panel"><div class="crt-panel-title">1. ВЫБЕРИ ПОДАРОК ДЛЯ АПГРЕЙДА</div><div class="crt-inv">${stakes.map(st=>{const img=wheelGiftImage(st);return `<div class="crt-gift ${wheelStakeKey===st.key?'on':''}" onclick="selectWheelStake('${st.key}')"><div class="crt-gift-img">${img?`<img src="${esc(img)}" onerror="this.style.display='none';this.parentElement.textContent='🎁'">`:'🎁'}</div><div class="crt-gift-name">${esc(st.name)}</div><div class="crt-gift-price">≈ ${st.floor.toFixed(2)} TON</div></div>`}).join('')}</div></div>`;
+  if(!stakes.length) return '';
+  return `<div class="crt-panel"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><div class="crt-panel-title" style="margin-bottom:0">1. ВЫБЕРИ ПОДАРОК ДЛЯ АПГРЕЙДА</div>${getTestGifts().length?`<button onclick="clearTestGifts()" style="font-size:9px;color:#ff8fa0;background:rgba(255,77,106,.08);border:1px solid rgba(255,77,106,.18);border-radius:9px;padding:5px 8px">очистить тест</button>`:''}</div><div class="crt-inv">${stakes.map(st=>{const img=wheelGiftImage(st);return `<div class="crt-gift ${wheelStakeKey===st.key?'on':''}" onclick="selectWheelStake('${st.key}')"><div class="crt-gift-img">${img?`<img src="${esc(img)}" onerror="this.style.display='none';this.parentElement.textContent='🎁'">`:'🎁'}</div><div class="crt-gift-name">${esc(st.name)}</div><div class="crt-gift-price">≈ ${st.floor.toFixed(2)} TON</div></div>`}).join('')}</div></div>`;
 }
 function renderWheel(){
   const pg=document.getElementById('pg-wheel'); if(!pg)return;
