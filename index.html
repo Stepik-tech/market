@@ -122,14 +122,14 @@ a{text-decoration:none}
 .crt-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}.crt-top h1{font-size:18px;font-weight:950;letter-spacing:-.4px}.crt-top p{font-size:10px;color:#68708f;margin-top:2px}.crt-live{margin-left:auto;display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(34,212,122,.08);border:1px solid rgba(34,212,122,.22);font-size:10px;color:#22d47a;font-weight:800}.crt-live::before{content:'';width:6px;height:6px;border-radius:50%;background:#22d47a;box-shadow:0 0 10px #22d47a;animation:pulse 1.6s infinite}
 .crt-machine{position:relative;margin:4px auto 16px;max-width:420px;perspective:900px}.crt-monitor{position:relative;padding:18px 16px 24px;border-radius:34px 34px 28px 28px;background:linear-gradient(145deg,#35313a 0%,#17171d 42%,#0a0a0e 100%);border:1px solid rgba(255,255,255,.10);box-shadow:0 34px 80px rgba(0,0,0,.72),inset 0 2px 0 rgba(255,255,255,.09),inset 0 -18px 38px rgba(0,0,0,.48);transform:rotateX(.8deg)}
 .crt-monitor::before{content:'';position:absolute;inset:8px 10px auto;height:34px;border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.08),transparent);pointer-events:none}.crt-brand{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);font-size:9px;font-weight:900;letter-spacing:2px;color:rgba(255,255,255,.18)}.crt-led{position:absolute;right:24px;bottom:9px;width:8px;height:8px;border-radius:50%;background:#22d47a;box-shadow:0 0 12px #22d47a}.crt-vents{position:absolute;left:24px;bottom:10px;display:flex;gap:4px}.crt-vents i{display:block;width:16px;height:3px;border-radius:3px;background:rgba(0,0,0,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
-.crt-screen{position:relative;min-height:318px;border-radius:30px / 42px;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#102419 0%,#07110d 52%,#020403 100%);border:10px solid #050507;box-shadow:inset 0 0 0 1px rgba(90,255,190,.10),inset 0 0 34px rgba(0,0,0,.85),inset 0 0 80px rgba(20,255,160,.08),0 0 0 1px rgba(255,255,255,.07);transform:translateZ(0)}
+.crt-screen{position:relative;height:336px;min-height:336px;max-height:336px;border-radius:30px / 42px;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#102419 0%,#07110d 52%,#020403 100%);border:10px solid #050507;box-shadow:inset 0 0 0 1px rgba(90,255,190,.10),inset 0 0 34px rgba(0,0,0,.85),inset 0 0 80px rgba(20,255,160,.08),0 0 0 1px rgba(255,255,255,.07);transform:translateZ(0)}
 .crt-screen::before{content:'';position:absolute;inset:0;z-index:6;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.045) 0 1px,transparent 1px 4px);mix-blend-mode:overlay;opacity:.55}.crt-screen::after{content:'';position:absolute;inset:-16px;z-index:7;pointer-events:none;border-radius:38px / 54px;background:radial-gradient(ellipse at 50% 50%,transparent 48%,rgba(0,0,0,.35) 75%,rgba(0,0,0,.86) 100%),linear-gradient(90deg,rgba(255,255,255,.035),transparent 18%,transparent 82%,rgba(255,255,255,.035));box-shadow:inset 0 0 42px rgba(0,0,0,.75)}
-.crt-content{position:relative;z-index:2;min-height:318px;padding:18px 16px;color:#baffdd;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;text-shadow:0 0 8px rgba(34,212,122,.42)}.crt-noise{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.10;background-image:radial-gradient(circle at 20% 30%,#fff 0 1px,transparent 1px),radial-gradient(circle at 70% 60%,#fff 0 1px,transparent 1px),radial-gradient(circle at 40% 80%,#fff 0 1px,transparent 1px);background-size:19px 17px,23px 21px,29px 31px;animation:crtNoise .22s steps(2) infinite}.crt-static .crt-noise{opacity:.28}.crt-static .crt-content{animation:crtJitter .18s steps(2) infinite}.crt-off .crt-content{opacity:.16;filter:brightness(.45)}.crt-off .crt-noise{opacity:.03}.crt-offline{position:absolute;inset:0;z-index:8;pointer-events:none;background:radial-gradient(ellipse at center,rgba(255,255,255,.10),transparent 8%,rgba(0,0,0,.92) 52%);animation:crtPowerDown 1.15s ease forwards}
+.crt-content{position:relative;z-index:2;height:100%;min-height:0;padding:18px 16px;color:#baffdd;overflow-y:auto;scrollbar-width:none;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;text-shadow:0 0 8px rgba(34,212,122,.42)}.crt-content::-webkit-scrollbar{display:none}.crt-noise{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.10;background-image:radial-gradient(circle at 20% 30%,#fff 0 1px,transparent 1px),radial-gradient(circle at 70% 60%,#fff 0 1px,transparent 1px),radial-gradient(circle at 40% 80%,#fff 0 1px,transparent 1px);background-size:19px 17px,23px 21px,29px 31px;animation:crtNoise .22s steps(2) infinite}.crt-static .crt-noise{opacity:.62;filter:contrast(3) brightness(1.55);background-size:7px 5px,11px 9px,13px 15px;animation:crtNoise .055s steps(2) infinite}.crt-static .crt-content{animation:crtJitter .08s steps(2) infinite;filter:contrast(1.18) brightness(1.1)}.crt-off .crt-content{opacity:.16;filter:brightness(.45)}.crt-off .crt-noise{opacity:.03}.crt-offline{position:absolute;inset:0;z-index:8;pointer-events:none;background:radial-gradient(ellipse at center,rgba(255,255,255,.10),transparent 8%,rgba(0,0,0,.92) 52%);animation:crtPowerDown 1.15s ease forwards}
 @keyframes crtNoise{0%{transform:translate(0,0)}25%{transform:translate(-2px,1px)}50%{transform:translate(1px,-1px)}75%{transform:translate(2px,2px)}100%{transform:translate(-1px,0)}}@keyframes crtJitter{0%,100%{transform:translate(0)}50%{transform:translate(1px,-1px)}}@keyframes crtPowerDown{0%{clip-path:inset(0 0 0 0);opacity:0}45%{clip-path:inset(42% 0 42% 0);opacity:.75}100%{clip-path:inset(50% 0 50% 0);opacity:1}}
 .crt-stand{width:120px;height:36px;margin:-6px auto 0;background:linear-gradient(180deg,#17171d,#07070a);border-radius:0 0 18px 18px;border:1px solid rgba(255,255,255,.06);box-shadow:0 20px 35px rgba(0,0,0,.55)}.crt-base{width:210px;height:22px;margin:-2px auto 0;border-radius:50%;background:radial-gradient(ellipse,#23212a 0%,#09090d 70%);box-shadow:0 22px 45px rgba(0,0,0,.65)}
 .crt-line{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}.crt-kicker{font-size:10px;font-weight:900;letter-spacing:1.5px;color:#5affb4}.crt-terminal-title{font-size:22px;font-weight:950;line-height:1.05;letter-spacing:-1px;color:#d8ffe9;text-shadow:0 0 18px rgba(34,212,122,.5)}.crt-terminal-sub{font-size:11px;line-height:1.55;color:rgba(186,255,221,.66);margin-top:8px}.crt-status{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(90,255,180,.18);background:rgba(20,255,140,.06);border-radius:10px;padding:5px 8px;font-size:9px;font-weight:900;color:#7dffc2}.crt-status.err{border-color:rgba(255,77,106,.28);background:rgba(255,77,106,.08);color:#ff91a4}.crt-status.warn{border-color:rgba(240,180,41,.28);background:rgba(240,180,41,.08);color:#ffd36b}
 .crt-inv{display:flex;gap:9px;overflow-x:auto;padding:10px 2px 4px;scrollbar-width:none}.crt-inv::-webkit-scrollbar{display:none}.crt-gift{flex:0 0 102px;border-radius:16px;padding:10px 8px;background:linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.08);box-shadow:0 10px 30px rgba(0,0,0,.28);cursor:pointer;transition:transform .18s,border-color .18s,box-shadow .18s}.crt-gift:active{transform:scale(.96)}.crt-gift.on{border-color:rgba(90,255,180,.55);box-shadow:0 0 0 1px rgba(90,255,180,.18),0 0 26px rgba(34,212,122,.18)}.crt-gift-img{width:58px;height:58px;margin:0 auto 7px;border-radius:14px;background:radial-gradient(circle,rgba(124,92,255,.22),rgba(0,0,0,.22));display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:30px}.crt-gift-img img{width:100%;height:100%;object-fit:contain}.crt-gift-name{font-size:10px;font-weight:900;color:#eef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}.crt-gift-price{font-size:10px;color:#f0b429;font-weight:950;text-align:center;margin-top:3px}.crt-panel{margin:14px 14px 0;padding:14px;border-radius:20px;background:linear-gradient(160deg,rgba(18,18,30,.72),rgba(8,8,14,.86));border:1px solid rgba(255,255,255,.08);box-shadow:0 12px 32px rgba(0,0,0,.38)}.crt-panel-title{font-size:11px;color:#8a88b8;font-weight:900;letter-spacing:.8px;margin-bottom:9px}.crt-targets{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}.crt-target{border-radius:14px;padding:9px;background:rgba(0,0,0,.24);border:1px solid rgba(90,255,180,.12);cursor:pointer;transition:transform .16s,border-color .16s,background .16s}.crt-target:active{transform:scale(.96)}.crt-target:hover,.crt-target.on{border-color:rgba(90,255,180,.48);background:rgba(34,212,122,.07)}.crt-target-row{display:flex;align-items:center;gap:8px}.crt-target img{width:38px;height:38px;object-fit:contain;border-radius:10px;background:rgba(255,255,255,.04)}.crt-target-name{font-size:10px;font-weight:950;color:#eafff2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.crt-target-price{font-size:10px;color:#ffd36b;font-weight:950}.crt-chance{margin-top:14px;border-radius:16px;background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.07);padding:11px}.crt-meter{height:16px;border-radius:999px;background:rgba(255,77,106,.16);overflow:hidden;border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 2px 8px rgba(0,0,0,.45)}.crt-meter-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,#22d47a,#a8ff78,#f0b429);box-shadow:0 0 18px rgba(34,212,122,.35)}.crt-upgrade-btn{width:100%;margin-top:12px;padding:12px;border-radius:14px;background:linear-gradient(135deg,#22d47a,#4d9fff);color:#00130a;font-size:12px;font-weight:950;border:0;box-shadow:0 10px 30px rgba(34,212,122,.24);cursor:pointer}.crt-upgrade-btn:active{transform:scale(.98)}.crt-upgrade-btn:disabled{opacity:.45;filter:grayscale(1);pointer-events:none}
-.crt-roulette{position:relative;height:120px;margin-top:15px;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,rgba(0,0,0,.42),rgba(0,0,0,.22));border:1px solid rgba(90,255,180,.16)}.crt-win-zone{position:absolute;top:0;bottom:0;left:50%;width:78px;transform:translateX(-50%);z-index:5;border-left:2px solid #22d47a;border-right:2px solid #22d47a;background:linear-gradient(90deg,transparent,rgba(34,212,122,.16),transparent);box-shadow:0 0 24px rgba(34,212,122,.25)}.crt-win-zone::before{content:'WIN ZONE';position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:950;color:#72ffc0;white-space:nowrap}.crt-tape{position:absolute;left:0;top:26px;height:76px;display:flex;gap:0;transition:transform 4.15s cubic-bezier(.08,.72,.04,1);will-change:transform}.crt-cell{width:72px;height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid rgba(255,255,255,.05)}.crt-cell img{width:42px;height:42px;object-fit:contain;border-radius:10px;background:rgba(255,255,255,.04)}.crt-cell div{font-size:8px;color:#baffdd;max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}.crt-result{min-height:250px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.crt-result-icon{font-size:54px;filter:drop-shadow(0 0 22px currentColor);margin-bottom:14px}.crt-result-title{font-size:23px;font-weight:950;letter-spacing:-.8px}.crt-result-title.win{color:#74ffbd}.crt-result-title.lose{color:#ff6b82}.crt-result-sub{font-size:11px;color:rgba(186,255,221,.62);line-height:1.6;margin-top:8px;max-width:260px}.crt-actions{display:flex;gap:10px;margin:14px}.crt-actions button{flex:1;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);color:#e8e8ff;font-size:12px;font-weight:900}.crt-actions button.primary{background:linear-gradient(135deg,#7c5cff,#4d9fff);color:#fff;border:0}.crt-empty{padding:20px;text-align:center}.crt-empty .big{font-size:42px;margin-bottom:10px}.crt-empty h3{font-size:17px;margin-bottom:6px}.crt-empty p{font-size:12px;color:#7d86a6;line-height:1.6}.crt-connect{margin-top:14px;padding:12px 18px;border-radius:14px;background:linear-gradient(135deg,#4d9fff,#7c5cff);color:#fff;font-weight:950;font-size:12px}
+.crt-roulette{position:relative;height:120px;margin-top:15px;border-radius:18px;overflow:hidden;background:linear-gradient(180deg,rgba(0,0,0,.42),rgba(0,0,0,.22));border:1px solid rgba(90,255,180,.16)}.crt-win-zone{position:absolute;top:0;bottom:0;left:50%;width:78px;transform:translateX(-50%);z-index:5;border-left:2px solid #22d47a;border-right:2px solid #22d47a;background:linear-gradient(90deg,transparent,rgba(34,212,122,.16),transparent);box-shadow:0 0 24px rgba(34,212,122,.25)}.crt-win-zone::before{content:'WIN ZONE';position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:950;color:#72ffc0;white-space:nowrap}.crt-tape{position:absolute;left:0;top:26px;height:76px;display:flex;gap:0;transition:transform 4.15s cubic-bezier(.08,.72,.04,1);will-change:transform}.crt-cell{width:72px;height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid rgba(255,255,255,.05)}.crt-cell img{width:42px;height:42px;object-fit:contain;border-radius:10px;background:rgba(255,255,255,.04)}.crt-cell div{font-size:8px;color:#baffdd;max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}.crt-result{min-height:250px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.crt-result-icon{font-size:54px;filter:drop-shadow(0 0 22px currentColor);margin-bottom:14px}.crt-result-title{font-size:23px;font-weight:950;letter-spacing:-.8px}.crt-result-title.win{color:#74ffbd}.crt-result-title.lose{color:#ff6b82}.crt-result-sub{font-size:11px;color:rgba(186,255,221,.62);line-height:1.6;margin-top:8px;max-width:260px}.crt-actions{display:flex;gap:10px;margin:14px}.crt-actions button{flex:1;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.06);color:#e8e8ff;font-size:12px;font-weight:900}.crt-actions button.primary{background:linear-gradient(135deg,#7c5cff,#4d9fff);color:#fff;border:0}.crt-wheelbox{position:relative;width:min(250px,86vw);height:min(250px,86vw);max-width:250px;max-height:250px;margin:12px auto 8px;border-radius:50%;filter:drop-shadow(0 0 24px rgba(34,212,122,.12))}.crt-dial{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(90,255,180,.22);box-shadow:inset 0 0 26px rgba(0,0,0,.72),0 0 0 8px rgba(0,0,0,.18);overflow:hidden}.crt-dial::before{content:'';position:absolute;inset:18px;border-radius:50%;background:radial-gradient(circle,#07110d 0%,#020403 70%);border:1px solid rgba(90,255,180,.14);box-shadow:inset 0 0 22px rgba(0,0,0,.8);z-index:2}.crt-dial::after{content:'WIN';position:absolute;top:13px;left:50%;transform:translateX(-50%);z-index:3;font-size:9px;font-weight:950;color:#03150a;background:#70ffb7;border-radius:999px;padding:3px 8px;box-shadow:0 0 12px rgba(34,212,122,.55)}.crt-needle{position:absolute;inset:0;z-index:5;transition:transform 4.2s cubic-bezier(.08,.72,.04,1);will-change:transform}.crt-needle::before{content:'';position:absolute;left:50%;top:50%;width:4px;height:102px;background:linear-gradient(180deg,#ffed8a,#ff4d6a);border-radius:8px;transform:translate(-50%,-100%);box-shadow:0 0 14px rgba(255,77,106,.55)}.crt-needle::after{content:'';position:absolute;left:50%;top:50%;width:18px;height:18px;border-radius:50%;background:#f4f2ff;transform:translate(-50%,-50%);box-shadow:0 0 18px rgba(255,255,255,.35);border:3px solid #0a0a10}.crt-wheel-legend{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:8px}.crt-wheel-legend span{font-size:9px;font-weight:900;border-radius:999px;padding:4px 8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04)}.crt-spin-caption{text-align:center;font-size:10px;color:#7dffc2;margin-top:8px;line-height:1.5}.crt-off .crt-result{opacity:.18;filter:brightness(.55)}.crt-empty{padding:20px;text-align:center}.crt-empty .big{font-size:42px;margin-bottom:10px}.crt-empty h3{font-size:17px;margin-bottom:6px}.crt-empty p{font-size:12px;color:#7d86a6;line-height:1.6}.crt-connect{margin-top:14px;padding:12px 18px;border-radius:14px;background:linear-gradient(135deg,#4d9fff,#7c5cff);color:#fff;font-weight:950;font-size:12px}
 
 </style>
 </head>
@@ -1176,9 +1176,55 @@ function confirmSell(slug){const priceEl=document.getElementById('sell-price');c
 
 // ═══ WHEEL / CRT UPGRADE MACHINE ═══
 let wheelStakeKey=null, wheelStake=null, wheelUpgradeTarget=null, wheelChance=0, wheelStage='idle', wheelSpinning=false;
-let wheelTapeItems=[], wheelFinalIndex=28, wheelWillWin=false, wheelPreselectSlug=null;
+let wheelTapeItems=[], wheelFinalIndex=28, wheelWillWin=false, wheelPreselectSlug=null, wheelNeedleAngle=0, wheelResultPhase='text', wheelStaticFlash=false;
+const CRT_STATIC_SOUND_URL='interference-crunchy-close.mp3';
+let crtAudioCtx=null, crtSpinNodes=null;
 
 function openWheelWith(slug){wheelPreselectSlug=slug||null;go('wheel');}
+
+function ensureCrtAudioCtx(){
+  try{
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(!Ctx) return null;
+    if(!crtAudioCtx) crtAudioCtx=new Ctx();
+    if(crtAudioCtx.state==='suspended') crtAudioCtx.resume().catch(()=>{});
+    return crtAudioCtx;
+  }catch(e){return null;}
+}
+function playCrtStatic(ms=900){
+  try{
+    const a=new Audio(CRT_STATIC_SOUND_URL);
+    a.volume=.42; a.currentTime=0;
+    a.play().catch(()=>{});
+    setTimeout(()=>{try{a.pause();a.currentTime=0;}catch(e){}},ms);
+  }catch(e){}
+}
+function startCrtSpinSound(ms=4300){
+  const ctx=ensureCrtAudioCtx(); if(!ctx)return;
+  stopCrtSpinSound();
+  const bufferSize=ctx.sampleRate*2;
+  const buffer=ctx.createBuffer(1,bufferSize,ctx.sampleRate);
+  const data=buffer.getChannelData(0);
+  for(let i=0;i<bufferSize;i++) data[i]=(Math.random()*2-1)*.42;
+  const noise=ctx.createBufferSource(); noise.buffer=buffer; noise.loop=true;
+  const filter=ctx.createBiquadFilter(); filter.type='bandpass'; filter.frequency.value=820; filter.Q.value=.9;
+  const gain=ctx.createGain(); gain.gain.setValueAtTime(.0001,ctx.currentTime); gain.gain.exponentialRampToValueAtTime(.18,ctx.currentTime+.08); gain.gain.exponentialRampToValueAtTime(.045,ctx.currentTime+ms/1000);
+  const osc=ctx.createOscillator(); osc.type='sawtooth'; osc.frequency.setValueAtTime(80,ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(34,ctx.currentTime+ms/1000);
+  const oscGain=ctx.createGain(); oscGain.gain.setValueAtTime(.03,ctx.currentTime); oscGain.gain.exponentialRampToValueAtTime(.006,ctx.currentTime+ms/1000);
+  noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination); osc.connect(oscGain); oscGain.connect(ctx.destination);
+  noise.start(); osc.start(); crtSpinNodes={noise,osc,gain,oscGain};
+  setTimeout(stopCrtSpinSound,ms);
+}
+function stopCrtSpinSound(){
+  if(!crtSpinNodes)return;
+  try{crtSpinNodes.noise.stop();}catch(e){}
+  try{crtSpinNodes.osc.stop();}catch(e){}
+  crtSpinNodes=null;
+}
+function triggerCrtStatic(ms=850){
+  wheelStaticFlash=true; renderWheel(); playCrtStatic(ms);
+  setTimeout(()=>{wheelStaticFlash=false; if(curTab==='wheel')renderWheel();},ms);
+}
 
 function wheelGiftImage(item){
   if(!item) return '';
@@ -1248,8 +1294,8 @@ function renderCrtScreen(){
   const testGifts = getTestGifts();
   const noWallet = !walletAddress && !testGifts.length;
   const stakes = getWheelStakeItems();
-  const off = wheelStage==='result' ? 'crt-off' : '';
-  const stat = wheelStage==='target' ? 'crt-static' : '';
+  const off = (wheelStage==='result' && wheelResultPhase==='off') ? 'crt-off' : '';
+  const stat = (wheelStaticFlash || (wheelStage==='result' && wheelResultPhase==='static')) ? 'crt-static' : '';
   let inner='';
   if(noWallet){
     inner = `${renderCrtHeader()}<div class="crt-empty"><div class="big">📺</div><h3>КОШЕЛЁК НЕ ПОДКЛЮЧЁН</h3><p>Терминал апгрейда видит подарки из TON-кошелька. Для проверки можно выдать тестовый подарок.</p><button class="crt-connect" onclick="connectTonWallet()">🔗 Подключить кошелёк</button><button class="crt-connect" style="margin-left:8px;background:linear-gradient(135deg,#22d47a,#4d9fff);color:#00130a" onclick="addTestGift()">🎁 Выдать тест</button></div>`;
@@ -1264,9 +1310,11 @@ function renderCrtScreen(){
     const ch=wheelChance;
     inner = `${renderCrtHeader()}${renderCrtStakeMini()}<div style="display:flex;align-items:center;gap:10px;margin-top:10px"><div style="font-size:22px">➜</div><div class="crt-gift-img" style="width:58px;height:58px;margin:0"><img src="${wheelUpgradeTarget.image}" onerror="this.style.display='none';this.parentElement.textContent='🎁'"></div><div style="min-width:0"><div style="font-size:12px;font-weight:950;color:#eafff2">${esc(wheelUpgradeTarget.name)}</div><div style="font-size:10px;color:#ffd36b">цель · ${wheelUpgradeTarget.floor.toFixed(2)} TON</div></div></div><div class="crt-chance"><div class="crt-line" style="margin-bottom:8px"><span style="font-size:10px;color:#8cffc8;font-weight:950">ШАНС УСПЕХА</span><b style="font-size:18px;color:${ch>45?'#22d47a':ch>18?'#f0b429':'#ff4d6a'}">${ch}%</b></div><div class="crt-meter"><div class="crt-meter-fill" style="width:${ch}%"></div></div><button class="crt-upgrade-btn" onclick="doWheelSpin()">▶ ЗАПУСТИТЬ РУЛЕТКУ</button></div>`;
   } else if(wheelStage==='spin'){
-    inner = `${renderCrtHeader()}<div class="crt-terminal-sub">Лента запущена. Зелёная зона в центре — сектор выигрыша.</div><div class="crt-roulette" id="crtRoulette"><div class="crt-win-zone"></div><div class="crt-tape" id="crtTape">${wheelTapeItems.map(it=>`<div class="crt-cell"><img src="${esc(it.image||'')}" onerror="this.style.display='none';this.parentElement.firstChild.textContent='${it.fail?'✖':'🎁'}'"><div>${esc(it.name||'ERROR')}</div></div>`).join('')}</div></div><div style="font-size:10px;color:#7dffc2;margin-top:10px;text-align:center">TARGET: ${esc(wheelUpgradeTarget?.name||'—')} · ${wheelChance}%</div>`;
+    const deg=Math.max(7, Math.min(317, wheelChance*3.6));
+    const from=-90-deg/2;
+    inner = `${renderCrtHeader()}<div class="crt-terminal-sub">Стрелка запущена. Зелёная зона — выигрыш, пустота — проигрыш.</div><div class="crt-wheelbox"><div class="crt-dial" style="background:conic-gradient(from ${from}deg,rgba(34,212,122,.95) 0deg ${deg}deg,rgba(255,255,255,.045) ${deg}deg 360deg)"></div><div class="crt-needle" id="crtNeedle"></div></div><div class="crt-wheel-legend"><span style="color:#74ffbd">зелёное = WIN</span><span style="color:#ff8fa0">пустота = ERROR</span></div><div class="crt-spin-caption">TARGET: ${esc(wheelUpgradeTarget?.name||'—')} · ${wheelChance}%</div>`;
   } else if(wheelStage==='result'){
-    inner = `<div class="crt-result"><div class="crt-result-icon" style="color:${wheelWillWin?'#22d47a':'#ff4d6a'}">${wheelWillWin?'🏆':'⛔'}</div><div class="crt-result-title ${wheelWillWin?'win':'lose'}">${wheelWillWin?'Вы улучшили! Поздравляем':'Ошибка... Проиграли'}</div><div class="crt-result-sub">${wheelWillWin?`Терминал выдал ${esc(wheelUpgradeTarget?.name||'подарок')}. Шанс был ${wheelChance}%.`:`Сигнал оборвался вне зоны выигрыша. Шанс был ${wheelChance}%. Монитор выключается...`}</div></div><div class="crt-offline"></div>`;
+    inner = `<div class="crt-result"><div class="crt-result-icon" style="color:${wheelWillWin?'#22d47a':'#ff4d6a'}">${wheelWillWin?'🏆':'⛔'}</div><div class="crt-result-title ${wheelWillWin?'win':'lose'}">${wheelWillWin?'Вы улучшили! Поздравляем':'Ошибка... Проиграли'}</div><div class="crt-result-sub">${wheelWillWin?`Терминал выдал ${esc(wheelUpgradeTarget?.name||'подарок')}. Шанс был ${wheelChance}%.`:`Сигнал оборвался вне зоны выигрыша. Шанс был ${wheelChance}%. Сейчас монитор погаснет...`}</div></div>${wheelResultPhase==='off'?'<div class="crt-offline"></div>':''}`;
   }
   return `<div class="crt-screen ${stat} ${off}"><div class="crt-noise"></div><div class="crt-content">${inner}</div></div>`;
 }
@@ -1281,23 +1329,23 @@ function renderWheel(){
   pg.innerHTML=`<div class="crt-page">
     <div class="crt-top"><button class="back" onclick="go('market')">‹</button><div><h1>CRT Upgrade</h1><p>старый монитор · помехи · шанс апгрейда</p></div><div class="crt-live"><span class="online-count">${onlineCount}</span></div></div>
     <div class="crt-machine"><div class="crt-monitor">${renderCrtScreen()}<div class="crt-vents"><i></i><i></i><i></i></div><div class="crt-led"></div><div class="crt-brand">CURSOR-95</div></div><div class="crt-stand"></div><div class="crt-base"></div></div>
-    ${renderWheelInventory()}
-    ${wheelStage==='result'?`<div class="crt-actions"><button onclick="resetWheelCrt()">↻ Ещё раз</button><button class="primary" onclick="go('market')">🏪 На рынок</button></div>`:''}
+    ${wheelStage==='idle'?renderWheelInventory():''}
+    ${(wheelStage==='result'&&wheelResultPhase==='off')?`<div class="crt-actions"><button onclick="resetWheelCrt()">↻ Ещё раз</button><button class="primary" onclick="go('market')">🏪 На рынок</button></div>`:''}
   </div>`;
-  if(wheelStage==='spin') setTimeout(startWheelTapeAnimation,80);
+  if(wheelStage==='spin') setTimeout(startWheelNeedleAnimation,80);
 }
 function selectWheelStake(key){
   const item=getWheelStakeItems().find(x=>x.key===key); if(!item || wheelSpinning)return;
-  wheelStakeKey=key; wheelStake=item; wheelUpgradeTarget=null; wheelChance=0; wheelStage='target'; wheelTapeItems=[]; wheelWillWin=false;
-  renderWheel();
+  wheelStakeKey=key; wheelStake=item; wheelUpgradeTarget=null; wheelChance=0; wheelStage='target'; wheelTapeItems=[]; wheelWillWin=false; wheelResultPhase='text';
+  triggerCrtStatic(820);
 }
 function selectWheelTarget(slug){
   if(!wheelStake || wheelSpinning)return;
   wheelUpgradeTarget=getWheelTargets().find(t=>t.slug===slug) || null;
   if(!wheelUpgradeTarget)return;
   wheelChance=calcWheelChance(wheelStake,wheelUpgradeTarget);
-  wheelStage='ready';
-  renderWheel();
+  wheelStage='ready'; wheelResultPhase='text';
+  renderWheel(); playCrtStatic(260);
 }
 function buildWheelTapeItems(win){
   const pool=GIFTS.map(g=>({name:g.name,image:thumb(g.slug)}));
@@ -1315,30 +1363,46 @@ function doWheelSpin(){
   if(!wheelStake||!wheelUpgradeTarget||wheelSpinning)return;
   wheelSpinning=true;
   wheelWillWin = Math.random()*100 < wheelChance;
-  wheelTapeItems = buildWheelTapeItems(wheelWillWin);
+  wheelResultPhase='text';
+  const deg=Math.max(7, Math.min(317, wheelChance*3.6));
+  const center=-90;
+  let finalLocal;
+  if(wheelWillWin) finalLocal = center + (Math.random()-.5) * Math.max(4, deg*.72);
+  else finalLocal = center + deg/2 + 18 + Math.random()*(360-deg-36);
+  wheelNeedleAngle = 360*7 + finalLocal;
   wheelStage='spin';
   renderWheel();
+  startCrtSpinSound(4300);
   setTimeout(()=>{
+    stopCrtSpinSound();
     wheelStage='result';
     wheelSpinning=false;
     if(wheelWillWin) spawnConfetti();
     renderWheel();
-  },4700);
+    setTimeout(()=>{
+      if(curTab!=='wheel' || wheelStage!=='result') return;
+      wheelResultPhase='static';
+      renderWheel();
+      playCrtStatic(1250);
+      setTimeout(()=>{
+        if(curTab!=='wheel' || wheelStage!=='result') return;
+        wheelResultPhase='off';
+        renderWheel();
+      },1150);
+    },1650);
+  },4400);
 }
-function startWheelTapeAnimation(){
-  const tape=document.getElementById('crtTape');
-  const wrap=document.getElementById('crtRoulette');
-  if(!tape||!wrap)return;
-  const cell=72;
-  tape.style.transition='none';
-  tape.style.transform='translateX(0px)';
-  void tape.offsetWidth;
-  const x = (wrap.clientWidth/2) - (wheelFinalIndex*cell + cell/2);
-  tape.style.transition='transform 4.15s cubic-bezier(.08,.72,.04,1)';
-  tape.style.transform=`translateX(${x}px)`;
+function startWheelNeedleAnimation(){
+  const needle=document.getElementById('crtNeedle');
+  if(!needle)return;
+  needle.style.transition='none';
+  needle.style.transform='rotate(0deg)';
+  void needle.offsetWidth;
+  needle.style.transition='transform 4.2s cubic-bezier(.08,.72,.04,1)';
+  needle.style.transform=`rotate(${wheelNeedleAngle}deg)`;
 }
 function resetWheelCrtState(){
-  wheelStakeKey=null; wheelStake=null; wheelUpgradeTarget=null; wheelChance=0; wheelStage='idle'; wheelSpinning=false; wheelTapeItems=[]; wheelWillWin=false;
+  wheelStakeKey=null; wheelStake=null; wheelUpgradeTarget=null; wheelChance=0; wheelStage='idle'; wheelSpinning=false; wheelTapeItems=[]; wheelWillWin=false; wheelResultPhase='text'; wheelStaticFlash=false; stopCrtSpinSound();
 }
 function resetWheelCrt(){
   resetWheelCrtState();
@@ -1626,6 +1690,6 @@ async function init() {
 init();
 </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fe96e403a04eebe',t:'MTc3OTI2MDA3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ff38b01796fc06a',t:'MTc3OTM2NjEwOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
