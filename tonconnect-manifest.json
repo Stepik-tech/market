@@ -1,5 +1,8 @@
 {
   "url": "https://stepik-tech.github.io/market/",
   "name": "CursorGift",
-  "iconUrl": "https://i.imgur.com/2b2hhDc.png"
+  "iconUrl": "https://i.imgur.com/2b2hhDc.png",
+  "termsOfUseUrl": "https://stepik-tech.github.io/market/",
+  "privacyPolicyUrl": "https://stepik-tech.github.io/market/"
 }
+
