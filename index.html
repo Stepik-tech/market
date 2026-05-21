@@ -72,16 +72,26 @@ a{text-decoration:none}
 
 /* ── LAYOUT ── */
 .app{display:flex;flex-direction:column;min-height:100dvh;width:100%;max-width:100%;margin:0}
-.page{overflow-y:auto;padding-bottom:80px;min-height:100dvh}
+.page{overflow-y:auto;padding-bottom:96px;min-height:100dvh}
 
-/* ── NAV ── */
-.nav{position:fixed;bottom:0;left:0;right:0;width:100%;background:rgba(10,10,20,.92);-webkit-backdrop-filter:blur(30px) saturate(200%);backdrop-filter:blur(30px) saturate(200%);border-top:1px solid rgba(124,92,255,.25);box-shadow:0 -1px 0 rgba(124,92,255,.15),0 -16px 40px rgba(0,0,0,.5);display:flex;z-index:9999;padding-bottom:env(safe-area-inset-bottom,0);transform:none}
-.nb{flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;transition:transform .12s}
-.nb:active{transform:scale(.9)}
-.npip{position:absolute;top:0;left:50%;transform:translateX(-50%);width:26px;height:2px;border-radius:2px;background:linear-gradient(90deg,#7c5cff,#a480ff);box-shadow:0 0 10px #7c5cff}
-.nico{font-size:22px;transition:all .22s cubic-bezier(.34,1.56,.64,1)}
-.nico.on{transform:scale(1.2) translateY(-1px);filter:drop-shadow(0 0 8px rgba(124,92,255,.8))}
-.nlbl{font-size:10px;font-weight:600;letter-spacing:.2px}
+/* ── FLOATING GLASS NAV ── */
+.nav{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom,0));left:50%;transform:translateX(-50%) translateY(0) scale(1);width:min(390px,calc(100% - 28px));z-index:9999;display:flex;align-items:center;justify-content:space-around;padding:6px;background:rgba(8,8,18,.34);-webkit-backdrop-filter:blur(40px) saturate(200%);backdrop-filter:blur(40px) saturate(200%);border-radius:26px;border:1px solid rgba(255,255,255,.08);box-shadow:0 20px 60px rgba(0,0,0,.45),0 8px 24px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.07),inset 0 -1px 0 rgba(255,255,255,.02);transition:transform .32s cubic-bezier(.4,0,.2,1),opacity .32s cubic-bezier(.4,0,.2,1),filter .32s cubic-bezier(.4,0,.2,1),box-shadow .8s ease,border-color .8s ease;will-change:transform,opacity;filter:drop-shadow(0 4px 18px rgba(124,92,255,.10));overflow:hidden}
+.nav-tint{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;background:radial-gradient(ellipse at 25% 50%,rgba(124,92,255,.10) 0%,transparent 70%),radial-gradient(ellipse at 75% 50%,rgba(77,159,255,.06) 0%,transparent 70%);transition:background .9s cubic-bezier(.4,0,.2,1)}
+.nav-glow{position:absolute;bottom:-8px;left:12%;right:12%;height:36px;border-radius:50%;background:radial-gradient(ellipse,rgba(124,92,255,.14) 0%,transparent 70%);pointer-events:none;z-index:-1;transition:background .8s ease}
+.nav-pill{position:absolute;top:6px;left:0;height:calc(100% - 12px);width:64px;border-radius:18px;pointer-events:none;z-index:0;opacity:1;transition:transform .42s cubic-bezier(.4,0,.12,1),width .42s cubic-bezier(.4,0,.12,1),opacity .3s ease;background:linear-gradient(135deg,rgba(124,92,255,.20),rgba(77,159,255,.10));box-shadow:inset 0 0 0 1px rgba(124,92,255,.22),0 6px 22px rgba(124,92,255,.16),0 2px 8px rgba(77,159,255,.08)}
+.nav-pill::after{content:'';position:absolute;inset:0;border-radius:inherit;background:radial-gradient(ellipse at 30% 20%,rgba(255,255,255,.06) 0%,transparent 60%);pointer-events:none}
+.nav-pill-line{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:20px;height:3px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(124,92,255,.55),transparent);animation:pillPulse 2.8s ease-in-out infinite;pointer-events:none}
+@keyframes pillPulse{0%,100%{opacity:.4;transform:translateX(-50%) scaleX(1)}50%{opacity:1;transform:translateX(-50%) scaleX(1.5)}}
+.nav.nav-hidden{transform:translateX(-50%) translateY(130%) scale(.94);opacity:0;pointer-events:none;filter:drop-shadow(0 4px 18px rgba(124,92,255,0)) blur(2px);transition:transform .22s cubic-bezier(.4,0,1,1),opacity .22s cubic-bezier(.4,0,1,1),filter .22s cubic-bezier(.4,0,1,1)}
+.nb{flex:1;min-width:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 8px;border-radius:18px;cursor:pointer;position:relative;z-index:1;-webkit-user-select:none;user-select:none;transition:transform .22s ease;background:transparent;border:0;color:inherit}
+.nb:active{transform:scale(.92)}
+.npip{display:none!important}
+.nico{font-size:22px;line-height:1;transition:transform .3s cubic-bezier(.34,1.56,.64,1),filter .3s ease;position:relative;z-index:1}
+.nlbl{font-size:10px;font-weight:600;letter-spacing:.2px;color:rgba(255,255,255,.35);transition:color .3s ease,transform .25s ease;position:relative;z-index:1;white-space:nowrap}
+.nb.active .nico,.nico.on{transform:scale(1.15) translateY(-1px);filter:drop-shadow(0 3px 10px rgba(124,92,255,.55))}
+.nb.active .nlbl{color:rgba(210,195,255,.95)}
+.nb:not(.active):hover .nlbl{color:rgba(255,255,255,.52)}
+.nb:not(.active):hover .nico{transform:scale(1.06)}
 
 /* ── CARDS ── */
 .gcard{border-radius:20px;cursor:pointer;position:relative;overflow:hidden;transition:transform .15s;display:flex;flex-direction:column;background:linear-gradient(160deg,rgba(22,18,40,.98),rgba(12,12,22,.99));border:1px solid rgba(255,255,255,.07);box-shadow:0 4px 20px rgba(0,0,0,.5)}
@@ -175,26 +185,30 @@ a{text-decoration:none}
   <div class="page" id="pg-detail" style="display:none"></div>
   <div class="page" id="pg-wheel" style="display:none"></div>
 
-  <nav class="nav">
-    <button class="nb" onclick="go('market')">
+  <nav class="nav" id="bottomNav">
+    <div class="nav-tint" id="navTint"></div>
+    <div class="nav-glow" id="navGlow"></div>
+    <div class="nav-pill" id="navPill"><div class="nav-pill-line"></div></div>
+
+    <button class="nb active" data-tab="market" onclick="go('market')">
       <div class="npip" id="pip-market"></div>
       <span class="nico on" id="ico-market">🏪</span>
-      <span class="nlbl" style="color:#a480ff" id="lbl-market">Рынок</span>
+      <span class="nlbl" id="lbl-market">Рынок</span>
     </button>
-    <button class="nb" onclick="go('news')">
-      <div class="npip" id="pip-news" style="display:none"></div>
+    <button class="nb" data-tab="news" onclick="go('news')">
+      <div class="npip" id="pip-news"></div>
       <span class="nico" id="ico-news">📰</span>
-      <span class="nlbl" style="color:#404060" id="lbl-news">Новости</span>
+      <span class="nlbl" id="lbl-news">Новости</span>
     </button>
-    <button class="nb" onclick="go('wheel')">
-      <div class="npip" id="pip-wheel" style="display:none"></div>
+    <button class="nb" data-tab="wheel" onclick="go('wheel')">
+      <div class="npip" id="pip-wheel"></div>
       <span class="nico" id="ico-wheel">🎡</span>
-      <span class="nlbl" style="color:#404060" id="lbl-wheel">Колесо</span>
+      <span class="nlbl" id="lbl-wheel">Колесо</span>
     </button>
-    <button class="nb" onclick="go('prof')">
-      <div class="npip" id="pip-prof" style="display:none"></div>
+    <button class="nb" data-tab="prof" onclick="go('prof')">
+      <div class="npip" id="pip-prof"></div>
       <span class="nico" id="ico-prof">👤</span>
-      <span class="nlbl" style="color:#404060" id="lbl-prof">Профиль</span>
+      <span class="nlbl" id="lbl-prof">Профиль</span>
     </button>
   </nav>
 </div>
@@ -297,6 +311,97 @@ let curTab = 'market', detailSlug = null, wheelTarget = null;
 let mSort = 'vol24h', mQuery = '', detailPeriod = 24;
 let lotties = {}, countdown = 20, ws = null;
 const nftAttrsData = {};
+
+// ═══ FLOATING GLASS NAV UI ═══
+const NAV_TINTS = {
+  market:[124,92,255],
+  news:[77,159,255],
+  wheel:[255,110,180],
+  prof:[160,128,255],
+  detail:[124,92,255]
+};
+let navHideTimer = null;
+let navTouchY = null;
+let navAutoHideBound = false;
+
+function getNav(){ return document.getElementById('bottomNav') || document.querySelector('.nav'); }
+function setNavHidden(hidden){
+  const nav = getNav();
+  if (!nav) return;
+  nav.classList.toggle('nav-hidden', Boolean(hidden));
+}
+function showNav(delay=0){
+  clearTimeout(navHideTimer);
+  if (delay > 0) navHideTimer = setTimeout(()=>setNavHidden(false), delay);
+  else setNavHidden(false);
+}
+function hideNavWhileMoving(){
+  setNavHidden(true);
+  clearTimeout(navHideTimer);
+  navHideTimer = setTimeout(()=>setNavHidden(false), 560);
+}
+function moveNavPill(tabName=curTab){
+  const nav = getNav();
+  const pill = document.getElementById('navPill');
+  if (!nav || !pill) return;
+  const btn = nav.querySelector(`.nb[data-tab="${tabName}"]`);
+  if (!btn) { pill.style.opacity = '0'; return; }
+  const navRect = nav.getBoundingClientRect();
+  const btnRect = btn.getBoundingClientRect();
+  if (!navRect.width || !btnRect.width) return;
+  pill.style.opacity = '1';
+  pill.style.width = btnRect.width + 'px';
+  pill.style.transform = 'translateX(' + (btnRect.left - navRect.left) + 'px)';
+}
+function setNavTint(r,g,b){
+  const nav=getNav(), tint=document.getElementById('navTint'), glow=document.getElementById('navGlow'), pill=document.getElementById('navPill');
+  if (!nav || !tint || !glow || !pill) return;
+  tint.style.background = `radial-gradient(ellipse at 20% 50%,rgba(${r},${g},${b},.14) 0%,transparent 65%),radial-gradient(ellipse at 80% 50%,rgba(${r},${g},${b},.08) 0%,transparent 65%)`;
+  glow.style.background = `radial-gradient(ellipse,rgba(${r},${g},${b},.16) 0%,transparent 70%)`;
+  nav.style.filter = `drop-shadow(0 4px 20px rgba(${r},${g},${b},.14))`;
+  nav.style.borderColor = `rgba(${r},${g},${b},.10)`;
+  nav.style.boxShadow = `0 20px 60px rgba(0,0,0,.42),0 8px 24px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.07),inset 0 -1px 0 rgba(255,255,255,.02),0 0 0 .5px rgba(${r},${g},${b},.08)`;
+  pill.style.background = `linear-gradient(135deg,rgba(${r},${g},${b},.22) 0%,rgba(${r},${g},${b},.08) 100%)`;
+  pill.style.boxShadow = `inset 0 0 0 1px rgba(${r},${g},${b},.22),0 6px 22px rgba(${r},${g},${b},.16),0 2px 8px rgba(${r},${g},${b},.08)`;
+  const line = pill.querySelector('.nav-pill-line');
+  if (line) line.style.background = `linear-gradient(90deg,transparent,rgba(${r},${g},${b},.55),transparent)`;
+}
+function setNavTintFor(tab){
+  const c = NAV_TINTS[tab] || NAV_TINTS.market;
+  setNavTint(c[0],c[1],c[2]);
+}
+function updateNavActive(tab){
+  const nav=getNav();
+  if (!nav) return;
+  nav.querySelectorAll('.nb').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  requestAnimationFrame(()=>moveNavPill(tab));
+  setNavTintFor(tab);
+}
+function bindFloatingNavAutoHide(){
+  if (navAutoHideBound) return;
+  navAutoHideBound = true;
+  const opts = { passive:true };
+  const bind = el => {
+    if (!el || el.__cgNavBound) return;
+    el.__cgNavBound = true;
+    el.addEventListener('scroll', hideNavWhileMoving, opts);
+    el.addEventListener('wheel', hideNavWhileMoving, opts);
+    el.addEventListener('touchstart', e => { navTouchY = e.touches?.[0]?.clientY ?? null; }, opts);
+    el.addEventListener('touchmove', e => {
+      const y = e.touches?.[0]?.clientY ?? null;
+      if (navTouchY === null || y === null || Math.abs(y-navTouchY) > 2) hideNavWhileMoving();
+      navTouchY = y;
+    }, opts);
+    el.addEventListener('touchend', ()=>showNav(360), opts);
+  };
+  document.querySelectorAll('.page').forEach(bind);
+  bind(window);
+  const nav=getNav();
+  if (nav) nav.addEventListener('click', ()=>{ showNav(); requestAnimationFrame(()=>moveNavPill(curTab)); }, opts);
+  window.addEventListener('resize', ()=>requestAnimationFrame(()=>moveNavPill(curTab)), opts);
+  requestAnimationFrame(()=>{ updateNavActive(curTab); showNav(); });
+}
+
 
 const thumb  = s => `https://fragment.com/file/gifts/${s}/thumb.webp`;
 const lottieUrl = (s,n) => `https://nft.fragment.com/gift/${s}-${n}.lottie.json`;
@@ -740,24 +845,22 @@ function loadLottie(cid,url){const el=document.getElementById(cid);if(!el||typeo
 
 // ═══ NAVIGATION ═══
 function go(tab) {
+  showNav();
   ['market','news','prof','detail','wheel'].forEach(t=>{
     const pg=document.getElementById('pg-'+t);if(pg)pg.style.display='none';
-    const pip=document.getElementById('pip-'+t);if(pip)pip.style.display='none';
     const ico=document.getElementById('ico-'+t);if(ico)ico.className='nico';
-    const lbl=document.getElementById('lbl-'+t);if(lbl)lbl.style.color='#404060';
   });
   const pg=document.getElementById('pg-'+tab);if(pg)pg.style.display='block';
-  const pip=document.getElementById('pip-'+tab);if(pip)pip.style.display='block';
   const ico=document.getElementById('ico-'+tab);if(ico)ico.className='nico on';
-  const lbl=document.getElementById('lbl-'+tab);if(lbl)lbl.style.color='#a480ff';
   curTab=tab;
+  updateNavActive(tab);
   if(tab==='market')renderMarket();
   if(tab==='news')renderNews();
   if(tab==='prof')renderProfile();
   if(tab==='wheel')renderWheel();
 }
 
-function openDetail(slug){detailSlug=slug;['pg-market','pg-news','pg-prof','pg-wheel'].forEach(x=>{const e=document.getElementById(x);if(e)e.style.display='none';});document.getElementById('pg-detail').style.display='block';renderDetail(slug);fetchHistory(slug);}
+function openDetail(slug){showNav();requestAnimationFrame(()=>moveNavPill(curTab));detailSlug=slug;['pg-market','pg-news','pg-prof','pg-wheel'].forEach(x=>{const e=document.getElementById(x);if(e)e.style.display='none';});document.getElementById('pg-detail').style.display='block';renderDetail(slug);fetchHistory(slug);}
 function closeDetail(){document.getElementById('pg-detail').style.display='none';go(['market','news','prof'].includes(curTab)?curTab:'market');}
 
 // ═══ MARKET PAGE ═══
@@ -1395,6 +1498,7 @@ async function init() {
   initTgUser();
   await loadProfileFallbackFromUrl();
   initTonConnect();
+  bindFloatingNavAutoHide();
   scheduleSplashAutoClick();
   setTimeout(saveProfile, 2500);
   if (walletAddress) setTimeout(()=>loadWalletData(true), 1200);
@@ -1432,6 +1536,6 @@ async function init() {
 init();
 </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fe96e403a04eebe',t:'MTc3OTI2MDA3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ff245d98b1d289c',t:'MTc3OTM1Mjc5MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ff27d433975289c',t:'MTc3OTM1NTA1OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
