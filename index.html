@@ -12,6 +12,7 @@
 <title>CursorGift v3.1</title><!-- BUILD:2026-05-20-v3 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+<script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#080810;color:#f0f0ff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;font-size:15px;min-height:100dvh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
@@ -199,6 +200,834 @@ a{text-decoration:none}
 </div>
 </div>
 
+<script>
+/* === PROFILE UI === */
+/**
+ * profile_ui.js — CursorGift Profile System
+ * Drop-in replacement for renderProfile() and pSettings() in index.html
+ *
+ * Usage in index.html:
+ *   <script src="profile_ui.js"></script>
+ *   Then call:  renderProfile()   — for the profile tab
+ *               pSettings()       — for the settings page
+ *
+ * Requires:
+ *   • Telegram WebApp SDK already loaded  (window.Telegram.WebApp)
+ *   • TON Connect UI CDN script loaded    (window.TON_CONNECT_UI)
+ *   • <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+ */
+
+(function (global) {
+  'use strict';
+
+  // ── Config ──────────────────────────────────────────────────────────────────
+  const API_BASE    = 'https://web-production-ad0c.up.railway.app/api';
+  const MANIFEST_URL = 'https://stepik-tech.github.io/market/tonconnect-manifest.json';
+  const TONAPI_BASE  = 'https://tonapi.io/v2';
+
+  const COLORS = ['#7c5cff', '#ff6eb4', '#4d9fff', '#22d47a', '#f0b429', '#ff4d6a'];
+
+  // ── State ───────────────────────────────────────────────────────────────────
+  let _profile       = null;   // { tg_id, first_name, last_name, username, photo_url, is_premium, wallet }
+  let _tonConnectUI  = null;   // TonConnect UI instance
+  let _wallet        = null;   // connected wallet info
+  let _nfts          = [];     // user's NFT list
+  let _balanceTon    = null;   // TON balance string
+
+  // ── Telegram helpers ────────────────────────────────────────────────────────
+  function getTgUser() {
+    try {
+      return window.Telegram?.WebApp?.initDataUnsafe?.user || null;
+    } catch (_) { return null; }
+  }
+
+  function getInitData() {
+    try {
+      return window.Telegram?.WebApp?.initData || '';
+    } catch (_) { return ''; }
+  }
+
+  // ── Avatar helpers ───────────────────────────────────────────────────────────
+  function getAvatarColor(userId) {
+    return COLORS[Math.abs(Number(userId)) % COLORS.length];
+  }
+
+  function getInitials(user) {
+    const fn = (user.first_name || '').trim();
+    const ln = (user.last_name  || '').trim();
+    if (fn && ln) return (fn[0] + ln[0]).toUpperCase();
+    if (fn)       return fn.slice(0, 2).toUpperCase();
+    if (user.username) return user.username.slice(0, 2).toUpperCase();
+    return '??';
+  }
+
+  /**
+   * Build an avatar element (76 × 76 px).
+   * Uses photo_url with fallback to gradient + initials.
+   */
+  function buildAvatar(user, size = 76) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = `
+      position: relative;
+      width: ${size}px;
+      height: ${size}px;
+      flex-shrink: 0;
+    `;
+
+    // Online dot
+    const dot = document.createElement('div');
+    dot.style.cssText = `
+      position: absolute;
+      bottom: 2px; right: 2px;
+      width: 14px; height: 14px;
+      background: #22d47a;
+      border: 2px solid #080810;
+      border-radius: 50%;
+      z-index: 2;
+    `;
+
+    const circle = document.createElement('div');
+    circle.style.cssText = `
+      width: ${size}px;
+      height: ${size}px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: ${getAvatarColor(user.id || user.tg_id || 0)};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: ${Math.round(size * 0.32)}px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 1px;
+      user-select: none;
+    `;
+
+    const photoUrl = user.photo_url;
+
+    if (photoUrl) {
+      const img = document.createElement('img');
+      img.src   = photoUrl;
+      img.alt   = 'avatar';
+      img.style.cssText = `width:100%;height:100%;object-fit:cover;border-radius:50%`;
+      img.onerror = () => {
+        img.remove();
+        circle.textContent = getInitials(user);
+      };
+      circle.appendChild(img);
+    } else {
+      circle.textContent = getInitials(user);
+    }
+
+    wrap.appendChild(circle);
+    wrap.appendChild(dot);
+    return wrap;
+  }
+
+  // ── TON Connect ──────────────────────────────────────────────────────────────
+  function initTonConnect() {
+    if (_tonConnectUI) return _tonConnectUI;
+
+    if (!window.TON_CONNECT_UI) {
+      console.warn('[Profile] TON_CONNECT_UI not loaded — add CDN script');
+      return null;
+    }
+
+    try {
+      _tonConnectUI = new window.TON_CONNECT_UI.TonConnectUI({
+        manifestUrl: MANIFEST_URL,
+      });
+
+      _tonConnectUI.onStatusChange((wallet) => {
+        _wallet = wallet;
+        if (wallet) {
+          const addr = wallet.account?.address;
+          if (addr) {
+            _balanceTon = null;
+            fetchBalance(addr);
+            fetchNFTs(addr);
+            saveWalletToServer(addr);
+          }
+        } else {
+          _wallet      = null;
+          _balanceTon  = null;
+          _nfts        = [];
+        }
+        // Re-render whichever view is active
+        if (document.getElementById('cg-profile-root')) renderProfile();
+        if (document.getElementById('cg-settings-root')) pSettings();
+      });
+
+      return _tonConnectUI;
+    } catch (e) {
+      console.error('[initTonConnect]', e);
+      return null;
+    }
+  }
+
+  // ── API calls ─────────────────────────────────────────────────────────────────
+  async function fetchProfile() {
+    const initData = getInitData();
+    const tgUser   = getTgUser();
+
+    if (!tgUser && !initData) {
+      // Dev mode: use mock
+      _profile = {
+        tg_id: 12345678,
+        first_name: 'Demo',
+        last_name: 'User',
+        username: 'demo_user',
+        photo_url: null,
+        is_premium: 1,
+        wallet: null,
+      };
+      return _profile;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData }),
+      });
+      const data = await res.json();
+      if (data.ok && data.profile) {
+        _profile = data.profile;
+        return _profile;
+      }
+    } catch (e) {
+      console.warn('[fetchProfile] server unavailable, using local user data');
+    }
+
+    // Fallback: use Telegram local data
+    if (tgUser) {
+      _profile = {
+        tg_id:      tgUser.id,
+        first_name: tgUser.first_name || '',
+        last_name:  tgUser.last_name  || '',
+        username:   tgUser.username   || '',
+        photo_url:  tgUser.photo_url  || null,
+        is_premium: tgUser.is_premium ? 1 : 0,
+        wallet:     null,
+      };
+    }
+    return _profile;
+  }
+
+  async function fetchBalance(address) {
+    try {
+      const res  = await fetch(`${TONAPI_BASE}/accounts/${encodeURIComponent(address)}`, {
+        headers: { 'Accept': 'application/json' },
+      });
+      const data = await res.json();
+      _balanceTon = (Number(data.balance) / 1e9).toFixed(2);
+    } catch (_) {
+      _balanceTon = '—';
+    }
+    // Patch balance text if already rendered
+    const el = document.getElementById('cg-balance-ton');
+    if (el) el.textContent = `${_balanceTon} TON`;
+  }
+
+  async function fetchNFTs(address) {
+    // Try backend proxy first (avoids CORS / rate limits)
+    try {
+      const res = await fetch(`${API_BASE}/nfts/${encodeURIComponent(address)}`);
+      if (res.ok) {
+        const data = await res.json();
+        _nfts = data.nfts || [];
+        renderNFTGrid();
+        return;
+      }
+    } catch (_) {}
+
+    // Direct tonapi fallback
+    try {
+      const res  = await fetch(
+        `${TONAPI_BASE}/accounts/${encodeURIComponent(address)}/nfts?limit=50&indirect_ownership=true`,
+        { headers: { 'Accept': 'application/json' } },
+      );
+      const data = await res.json();
+      _nfts = data.nft_items || [];
+    } catch (_) {
+      _nfts = [];
+    }
+    renderNFTGrid();
+  }
+
+  async function saveWalletToServer(address) {
+    const initData = getInitData();
+    if (!initData) return;
+    try {
+      await fetch(`${API_BASE}/wallet/connect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData, address }),
+      });
+    } catch (_) {}
+  }
+
+  // ── Format helpers ────────────────────────────────────────────────────────────
+  function shortAddr(addr) {
+    if (!addr) return '';
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  }
+
+  function nftImageUrl(nft) {
+    // Prefer fragment CDN, then tonapi image, then previews
+    const meta = nft.metadata || {};
+    const img  = meta.image || nft.previews?.[0]?.url || '';
+    return img;
+  }
+
+  function nftName(nft) {
+    return nft.metadata?.name || nft.dns || `NFT #${nft.index ?? '?'}`;
+  }
+
+  // ── TON wallet button ─────────────────────────────────────────────────────────
+  function buildWalletButton(container) {
+    const tc = initTonConnect();
+
+    if (!tc) {
+      const btn = document.createElement('button');
+      btn.className = 'cg-btn-connect';
+      btn.textContent = '🔗 Подключить TON кошелёк';
+      btn.style.cssText = `
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(135deg, #7c5cff, #4d9fff);
+        border: none; border-radius: 12px;
+        color: #fff; font-size: 15px; font-weight: 600;
+        cursor: pointer; margin-top: 8px;
+      `;
+      btn.onclick = () => alert('TON Connect SDK не загружен. Добавьте CDN скрипт.');
+      container.appendChild(btn);
+      return;
+    }
+
+    const walletAddr = _wallet?.account?.address;
+
+    if (walletAddr) {
+      // Connected — show address + disconnect
+      const row = document.createElement('div');
+      row.style.cssText = `
+        display: flex; align-items: center; justify-content: space-between;
+        background: #12122a; border: 1px solid #7c5cff44;
+        border-radius: 12px; padding: 12px 14px; margin-top: 8px;
+      `;
+      row.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:18px;">💎</span>
+          <div>
+            <div style="font-size:13px;color:#aaa;">TON кошелёк</div>
+            <div style="font-size:14px;font-weight:600;color:#fff;">${shortAddr(walletAddr)}</div>
+          </div>
+        </div>
+        <button id="cg-disconnect-btn" style="
+          background:none;border:1px solid #ff4d6a44;
+          border-radius:8px;padding:4px 10px;
+          color:#ff4d6a;font-size:12px;cursor:pointer;
+        ">Отключить</button>
+      `;
+      row.querySelector('#cg-disconnect-btn').onclick = () => tc.disconnect();
+      container.appendChild(row);
+    } else {
+      // Not connected
+      const btn = document.createElement('button');
+      btn.textContent = '🔗 Подключить TON кошелёк';
+      btn.style.cssText = `
+        width: 100%;
+        padding: 13px;
+        background: linear-gradient(135deg, #7c5cff, #4d9fff);
+        border: none; border-radius: 12px;
+        color: #fff; font-size: 15px; font-weight: 600;
+        cursor: pointer; margin-top: 8px;
+        transition: opacity .2s;
+      `;
+      btn.onmouseenter = () => btn.style.opacity = '.85';
+      btn.onmouseleave = () => btn.style.opacity = '1';
+      btn.onclick = () => tc.openModal();
+      container.appendChild(btn);
+    }
+  }
+
+  // ── NFT Grid renderer ─────────────────────────────────────────────────────────
+  function renderNFTGrid() {
+    const grid = document.getElementById('cg-nft-grid');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+
+    if (!_nfts.length) {
+      grid.innerHTML = `
+        <div style="grid-column:1/-1;text-align:center;padding:32px 0;color:#555;">
+          <div style="font-size:32px;margin-bottom:8px;">🎁</div>
+          <div style="font-size:14px;">NFT подарков пока нет</div>
+          <div style="font-size:12px;color:#444;margin-top:4px;">Подключите кошелёк для отображения</div>
+        </div>`;
+      return;
+    }
+
+    _nfts.slice(0, 20).forEach((nft) => {
+      const card = document.createElement('div');
+      card.style.cssText = `
+        background: #12122a;
+        border: 1px solid #1e1e40;
+        border-radius: 14px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform .2s, border-color .2s;
+      `;
+      card.onmouseenter = () => {
+        card.style.transform   = 'translateY(-3px)';
+        card.style.borderColor = '#7c5cff66';
+      };
+      card.onmouseleave = () => {
+        card.style.transform   = 'none';
+        card.style.borderColor = '#1e1e40';
+      };
+
+      const imgUrl = nftImageUrl(nft);
+      const name   = nftName(nft);
+      const floor  = nft.sale?.price?.value
+        ? (Number(nft.sale.price.value) / 1e9).toFixed(2) + ' TON'
+        : '';
+
+      card.innerHTML = `
+        <div style="
+          width:100%; aspect-ratio:1;
+          background: #0d0d22;
+          display:flex;align-items:center;justify-content:center;
+          overflow:hidden;
+        ">
+          ${imgUrl
+            ? `<img src="${imgUrl}" alt="${name}"
+                 style="width:100%;height:100%;object-fit:cover;"
+                 onerror="this.style.display='none';this.nextSibling.style.display='flex'"
+               />
+               <div style="display:none;font-size:36px;align-items:center;justify-content:center;width:100%;height:100%;">🎁</div>`
+            : `<div style="font-size:36px;">🎁</div>`
+          }
+        </div>
+        <div style="padding:8px 10px;">
+          <div style="font-size:13px;font-weight:600;color:#e0e0ff;
+                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+          ${floor ? `<div style="font-size:11px;color:#f0b429;margin-top:2px;">💎 ${floor}</div>` : ''}
+        </div>
+      `;
+
+      card.onclick = () => {
+        const addr = nft.address;
+        if (addr) window.open(`https://getgems.io/nft/${addr}`, '_blank');
+      };
+
+      grid.appendChild(card);
+    });
+  }
+
+  // ── Stats cards ────────────────────────────────────────────────────────────────
+  function buildStatsCards() {
+    const walletAddr = _wallet?.account?.address;
+    const nftCount   = _nfts.length;
+
+    const cards = [
+      {
+        icon: '💼',
+        label: 'Портфель TON',
+        value: walletAddr
+          ? `<span id="cg-balance-ton">${_balanceTon ? _balanceTon + ' TON' : '...'}</span>`
+          : '<span style="color:#555;font-size:12px;">не подключён</span>',
+        color: '#4d9fff',
+      },
+      {
+        icon: '🎡',
+        label: 'NFT подарков',
+        value: walletAddr ? String(nftCount) : '—',
+        color: '#7c5cff',
+      },
+      {
+        icon: '📊',
+        label: 'На рынке',
+        value: '—',
+        color: '#f0b429',
+      },
+    ];
+
+    const row = document.createElement('div');
+    row.style.cssText = `
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 18px 0;
+    `;
+
+    cards.forEach(({ icon, label, value, color }) => {
+      const c = document.createElement('div');
+      c.style.cssText = `
+        background: #10102a;
+        border: 1px solid #1e1e40;
+        border-radius: 14px;
+        padding: 14px 10px;
+        text-align: center;
+      `;
+      c.innerHTML = `
+        <div style="font-size:22px;margin-bottom:6px;">${icon}</div>
+        <div style="font-size:15px;font-weight:700;color:${color};">${value}</div>
+        <div style="font-size:11px;color:#666;margin-top:4px;">${label}</div>
+      `;
+      row.appendChild(c);
+    });
+
+    return row;
+  }
+
+  // ── ═══════════════════════════════════════════════════════════════════════════
+  //    Main: renderProfile()
+  //    Called by the app when the Profile tab is active.
+  // ─────────────────────────────────────────────────────────────────────────────
+  async function renderProfile() {
+    // Find or create root container
+    let root = document.getElementById('cg-profile-root');
+    if (!root) {
+      // Try to find the page container — adapt selector to your app
+      const pages = document.querySelectorAll('.page, #page-profile, [data-page="profile"]');
+      const page  = pages.length ? pages[pages.length - 1] : document.body;
+      root = document.createElement('div');
+      root.id = 'cg-profile-root';
+      page.innerHTML = '';
+      page.appendChild(root);
+    }
+
+    root.innerHTML = `<div style="
+      min-height:100vh;
+      background:#080810;
+      color:#fff;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      max-width:480px;
+      margin:0 auto;
+      padding:16px 16px 100px;
+      box-sizing:border-box;
+    ">
+      <div id="cg-profile-inner">
+        <div style="text-align:center;padding:60px 0 20px;color:#444;">
+          <div style="font-size:28px;animation:spin 1s linear infinite;">⏳</div>
+          <div style="font-size:13px;margin-top:8px;">Загрузка профиля...</div>
+        </div>
+      </div>
+    </div>
+    <style>
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+    `;
+
+    // Load profile data
+    const user = await fetchProfile();
+    if (!user) {
+      document.getElementById('cg-profile-inner').innerHTML = `
+        <div style="text-align:center;padding:60px 0;color:#555;">
+          <div style="font-size:36px;">😕</div>
+          <div style="margin-top:8px;">Не удалось загрузить профиль</div>
+        </div>`;
+      return;
+    }
+
+    const inner = document.getElementById('cg-profile-inner');
+    if (!inner) return;
+
+    inner.innerHTML = '';
+
+    // ── Header ────────────────────────────────────────────────────────────────
+    const header = document.createElement('div');
+    header.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 0 8px;
+    `;
+
+    const avatarEl = buildAvatar(user);
+    header.appendChild(avatarEl);
+
+    const nameBlock = document.createElement('div');
+    nameBlock.style.cssText = 'flex:1;min-width:0;';
+
+    const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Пользователь';
+    const isPremium = user.is_premium == 1 || user.is_premium === true;
+
+    nameBlock.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:22px;font-weight:700;color:#fff;">${fullName}</span>
+        ${isPremium ? `<span title="Telegram Premium" style="
+          display:inline-flex;align-items:center;gap:3px;
+          background:linear-gradient(135deg,#f0b429,#ff9800);
+          color:#1a1000;font-size:11px;font-weight:700;
+          padding:2px 7px;border-radius:10px;
+          flex-shrink:0;
+        ">⭐ Premium</span>` : ''}
+      </div>
+      ${user.username ? `<div style="font-size:13px;color:#7c5cff;margin-top:3px;">@${user.username}</div>` : ''}
+      <div style="font-size:12px;color:#444;margin-top:4px;">ID: ${user.tg_id || user.id || '—'}</div>
+    `;
+
+    header.appendChild(nameBlock);
+    inner.appendChild(header);
+
+    // ── Stats cards ────────────────────────────────────────────────────────────
+    inner.appendChild(buildStatsCards());
+
+    // ── Wallet section ─────────────────────────────────────────────────────────
+    const walletSection = document.createElement('div');
+    walletSection.style.cssText = 'margin-bottom:20px;';
+    walletSection.innerHTML = `
+      <div style="font-size:14px;font-weight:600;color:#888;margin-bottom:8px;
+                  text-transform:uppercase;letter-spacing:.8px;">
+        💎 TON Кошелёк
+      </div>
+    `;
+    buildWalletButton(walletSection);
+    inner.appendChild(walletSection);
+
+    // ── NFT section ────────────────────────────────────────────────────────────
+    const nftSection = document.createElement('div');
+    nftSection.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-size:14px;font-weight:600;color:#888;
+                    text-transform:uppercase;letter-spacing:.8px;">
+          🎁 Мои NFT подарки
+        </div>
+        <div style="font-size:12px;color:#7c5cff;cursor:pointer;"
+             onclick="fetchNFTs && _wallet && fetchNFTs(_wallet?.account?.address)">Обновить</div>
+      </div>
+      <div id="cg-nft-grid" style="
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      "></div>
+    `;
+    inner.appendChild(nftSection);
+
+    // Populate NFT grid
+    renderNFTGrid();
+
+    // If wallet already connected, refresh data
+    if (_wallet?.account?.address) {
+      fetchBalance(_wallet.account.address);
+    }
+  }
+
+  // ── ═══════════════════════════════════════════════════════════════════════════
+  //    Main: pSettings()
+  //    Called by the app when the Settings tab / button is pressed.
+  // ─────────────────────────────────────────────────────────────────────────────
+  async function pSettings() {
+    let root = document.getElementById('cg-settings-root');
+    if (!root) {
+      const pages = document.querySelectorAll('.page, #page-settings, [data-page="settings"]');
+      const page  = pages.length ? pages[pages.length - 1] : document.body;
+      root = document.createElement('div');
+      root.id = 'cg-settings-root';
+      page.innerHTML = '';
+      page.appendChild(root);
+    }
+
+    const user = _profile || (await fetchProfile());
+
+    root.innerHTML = `<div style="
+      min-height:100vh;
+      background:#080810;
+      color:#fff;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      max-width:480px;margin:0 auto;
+      padding:16px 16px 100px;
+      box-sizing:border-box;
+    "></div>`;
+
+    const wrap = root.firstChild;
+
+    // ── Back button ────────────────────────────────────────────────────────────
+    const back = document.createElement('button');
+    back.style.cssText = `
+      background:none;border:none;
+      color:#7c5cff;font-size:15px;font-weight:500;
+      cursor:pointer;padding:0;margin-bottom:16px;
+      display:flex;align-items:center;gap:6px;
+    `;
+    back.innerHTML = '← Назад';
+    back.onclick = () => {
+      root.remove();
+      if (typeof window.renderProfile === 'function') window.renderProfile();
+    };
+    wrap.appendChild(back);
+
+    // ── Avatar + name ──────────────────────────────────────────────────────────
+    if (user) {
+      const headerEl = document.createElement('div');
+      headerEl.style.cssText = `
+        display:flex;flex-direction:column;
+        align-items:center;text-align:center;
+        padding:16px 0 24px;
+      `;
+
+      const avatarEl = buildAvatar(user, 88);
+      headerEl.appendChild(avatarEl);
+
+      const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Пользователь';
+      const isPremium = user.is_premium == 1 || user.is_premium === true;
+
+      headerEl.innerHTML += `
+        <div style="font-size:20px;font-weight:700;margin-top:12px;">${fullName}
+          ${isPremium ? '<span title="Premium" style="font-size:16px;">⭐</span>' : ''}
+        </div>
+        ${user.username ? `<div style="font-size:13px;color:#7c5cff;margin-top:2px;">@${user.username}</div>` : ''}
+      `;
+      wrap.appendChild(headerEl);
+    }
+
+    // ── Settings sections ──────────────────────────────────────────────────────
+    function section(title, items) {
+      const s = document.createElement('div');
+      s.style.marginBottom = '20px';
+      s.innerHTML = `<div style="font-size:12px;font-weight:600;color:#555;
+        text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">${title}</div>`;
+
+      const list = document.createElement('div');
+      list.style.cssText = `
+        background:#10102a;border:1px solid #1e1e40;
+        border-radius:14px;overflow:hidden;
+      `;
+
+      items.forEach(({ icon, label, value, onClick, danger }, idx) => {
+        const row = document.createElement('div');
+        row.style.cssText = `
+          display:flex;align-items:center;justify-content:space-between;
+          padding:14px 16px;
+          cursor:${onClick ? 'pointer' : 'default'};
+          ${idx < items.length - 1 ? 'border-bottom:1px solid #1e1e40;' : ''}
+          ${danger ? 'color:#ff4d6a;' : 'color:#e0e0ff;'}
+          transition:background .15s;
+        `;
+        row.onmouseenter = () => onClick && (row.style.background = '#16163a');
+        row.onmouseleave = () => (row.style.background = 'none');
+
+        row.innerHTML = `
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="font-size:20px;">${icon}</span>
+            <span style="font-size:15px;">${label}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${value ? `<span style="font-size:13px;color:#555;">${value}</span>` : ''}
+            ${onClick ? `<span style="color:#444;font-size:16px;">›</span>` : ''}
+          </div>
+        `;
+        if (onClick) row.onclick = onClick;
+        list.appendChild(row);
+      });
+
+      s.appendChild(list);
+      return s;
+    }
+
+    // Account info
+    if (user) {
+      wrap.appendChild(section('Аккаунт', [
+        { icon: '🆔', label: 'Telegram ID', value: String(user.tg_id || user.id || '—') },
+        { icon: '👤', label: 'Username',    value: user.username ? `@${user.username}` : 'не задан' },
+        {
+          icon: '⭐',
+          label: 'Telegram Premium',
+          value: (user.is_premium == 1 || user.is_premium === true) ? 'Активен' : 'Нет',
+        },
+      ]));
+    }
+
+    // Wallet section
+    const walletDiv = document.createElement('div');
+    walletDiv.style.marginBottom = '20px';
+    walletDiv.innerHTML = `
+      <div style="font-size:12px;font-weight:600;color:#555;
+        text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">
+        💎 TON Кошелёк
+      </div>
+    `;
+    buildWalletButton(walletDiv);
+    wrap.appendChild(walletDiv);
+
+    // App settings
+    wrap.appendChild(section('Приложение', [
+      {
+        icon: '🔔',
+        label: 'Уведомления',
+        value: 'Вкл',
+        onClick: () => alert('Настройки уведомлений'),
+      },
+      {
+        icon: '🌐',
+        label: 'Язык',
+        value: 'Русский',
+        onClick: () => alert('Смена языка'),
+      },
+      {
+        icon: '🎨',
+        label: 'Тема',
+        value: 'Тёмная',
+      },
+    ]));
+
+    // About
+    wrap.appendChild(section('О приложении', [
+      { icon: '📋', label: 'Версия',       value: 'v3.1' },
+      {
+        icon: '📄',
+        label: 'Условия использования',
+        onClick: () => window.open('https://stepik-tech.github.io/market/terms', '_blank'),
+      },
+      {
+        icon: '🔒',
+        label: 'Конфиденциальность',
+        onClick: () => window.open('https://stepik-tech.github.io/market/privacy', '_blank'),
+      },
+    ]));
+
+    // Logout / disconnect
+    if (_wallet) {
+      const tc = initTonConnect();
+      wrap.appendChild(section('Кошелёк', [
+        {
+          icon: '🔌',
+          label: 'Отключить кошелёк',
+          danger: true,
+          onClick: () => tc && tc.disconnect(),
+        },
+      ]));
+    }
+  }
+
+  // ── Global exports ─────────────────────────────────────────────────────────────
+  global.renderProfile = renderProfile;
+  global.pSettings     = pSettings;
+  global.initTonConnect = initTonConnect;
+
+  // Expose internals for manual refresh
+  global._cgProfile = {
+    get profile() { return _profile; },
+    get wallet()  { return _wallet;  },
+    get nfts()    { return _nfts;    },
+    fetchProfile,
+    fetchNFTs,
+    fetchBalance,
+  };
+
+  // Auto-init TON Connect (non-blocking)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(initTonConnect, 500));
+  } else {
+    setTimeout(initTonConnect, 500);
+  }
+
+}(window));
+
+/* === END PROFILE UI === */
+</script>
 <script>
 'use strict';
 
@@ -1335,7 +2164,6 @@ async function init() {
 
 init();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fe96e403a04eebe',t:'MTc3OTI2MDA3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9feafc74c8b8bbc3',t:'MTc3OTI3NjM4Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-</body>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ff17e0f8d98ccaf',t:'MTc3OTM0NDYwNg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
