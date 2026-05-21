@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <title>CursorGift v3.1</title><!-- BUILD:2026-05-20-v3 -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
 <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
 <style>
@@ -391,6 +392,59 @@ async function saveProfile() {
     console.warn('[profile] backend unavailable, using Telegram local data', e?.message || e);
     return null;
   }
+}
+
+
+async function loadProfileFromApiByTgId(tgId) {
+  if (!tgId || tgId === '0') return null;
+  try {
+    const r = await fetch(PROXY_HTTP + '/api/profile/' + encodeURIComponent(tgId), { headers:{'Accept':'application/json'}, cache:'no-store' });
+    if (!r.ok) return null;
+    const json = await r.json().catch(()=>null);
+    return json?.data || json || null;
+  } catch(e) { return null; }
+}
+function applyApiProfileToTgUser(p) {
+  if (!p) return false;
+  const tgId = String(p.tgId || p.telegramId || p.id || '0');
+  if (!tgId || tgId === '0') return false;
+  const firstName = String(p.firstName || '').trim();
+  const lastName = String(p.lastName || '').trim();
+  const name = p.name || [firstName,lastName].filter(Boolean).join(' ') || 'Пользователь';
+  const username = p.username ? (String(p.username).startsWith('@') ? String(p.username) : '@'+String(p.username)) : '';
+  const initials = ((firstName[0]||'')+(lastName[0]||'')).toUpperCase() || (name[0]||'?').toUpperCase();
+  TG_USER = {
+    id: Number(tgId) || tgId,
+    tgId,
+    firstName,
+    lastName,
+    name,
+    username,
+    displayUsername: username || 'Без username',
+    photo: p.avatar || null,
+    avatar: p.avatar || null,
+    isPremium: Boolean(p.isPremium),
+    initials: initials.slice(0,2),
+    initData: tg?.initData || '',
+    isGuest: false,
+    color: ['#7c5cff','#ff6eb4','#4d9fff','#22d47a','#f0b429','#ff4d6a'][(Number(tgId)||0) % 6]
+  };
+  if (p.wallet) { walletAddress = p.wallet.address || walletAddress; walletBalance = Number(p.wallet.balance || walletBalance || 0); }
+  if (Array.isArray(p.gifts)) walletGifts = p.gifts;
+  const el = document.getElementById('splash-user');
+  if (el) el.textContent = 'Привет, ' + TG_USER.name + '! 👋';
+  return true;
+}
+async function loadProfileFallbackFromUrl() {
+  // Фолбэк: если Telegram WebApp API не отдал user, но пользователь открыл приложение кнопкой бота,
+  // бот добавляет ?tgId=... в URL. Тогда берём уже сохранённый профиль с backend.
+  try {
+    const q = new URLSearchParams(location.search);
+    const tgId = q.get('tgId') || q.get('user_id');
+    if (!tgId || !TG_USER?.isGuest) return false;
+    const p = await loadProfileFromApiByTgId(tgId);
+    return applyApiProfileToTgUser(p);
+  } catch(e) { return false; }
 }
 
 
@@ -1339,6 +1393,7 @@ ${[['💎 Адрес',walletAddress?shortAddr(walletAddress):'не подклю�
 // ═══ INIT ═══
 async function init() {
   initTgUser();
+  await loadProfileFallbackFromUrl();
   initTonConnect();
   scheduleSplashAutoClick();
   setTimeout(saveProfile, 2500);
@@ -1377,6 +1432,6 @@ async function init() {
 init();
 </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fe96e403a04eebe',t:'MTc3OTI2MDA3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ff23615de87289c',t:'MTc3OTM1MjE0NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ff245d98b1d289c',t:'MTc3OTM1Mjc5MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
