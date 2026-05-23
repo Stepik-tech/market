@@ -138,60 +138,50 @@ a{text-decoration:none}
 <div class="app">
 
 <!-- ═══ SPLASH ═══ -->
-<div id="splash" style="position:fixed;inset:0;z-index:999;background:radial-gradient(ellipse at 42% 38%,#1e0a42 0%,#080810 62%);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:none">
+<div id="splash" style="position:fixed;inset:0;z-index:999;background:linear-gradient(135deg,#f0eeff 0%,#ffffff 50%,#e8f4ff 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;">
 
-  <div style="position:relative;display:flex;flex-direction:column;align-items:center">
+  <!-- Фоновые частицы -->
+  <div id="splash-particles" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
 
-    <!-- Glow rings -->
-    <div style="position:absolute;top:50%;left:50%;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(124,92,255,.38) 0%,transparent 70%);animation:glowPulse 2.2s ease-in-out infinite;pointer-events:none"></div>
-    <div style="position:absolute;top:50%;left:50%;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(77,159,255,.16) 0%,transparent 70%);animation:glowPulse2 3s .6s ease-in-out infinite;pointer-events:none"></div>
-
-    <!-- Логотип — появляется и парит -->
-    <div id="splash-gift" style="position:relative;z-index:2;opacity:0;animation:giftReveal .95s cubic-bezier(.34,1.56,.64,1) .35s forwards;cursor:pointer" onclick="splashClick()">
-      <div id="splash-logo-wrap" style="animation:giftFloat 3.2s 1.4s ease-in-out infinite">
-        <img src="https://i.imgur.com/2b2hhDc.png" id="splash-logo-img"
-          style="width:118px;height:118px;border-radius:30px;object-fit:cover;display:block;box-shadow:0 0 0 1px rgba(124,92,255,.3),0 0 50px rgba(124,92,255,.75),0 24px 60px rgba(0,0,0,.7);transition:transform .12s,box-shadow .12s"
-          onerror="this.style.display='none';document.getElementById('splash-logo-fb').style.display='flex'"/>
-        <div id="splash-logo-fb" style="display:none;width:118px;height:118px;border-radius:30px;background:linear-gradient(135deg,#7c5cff,#4d9fff);align-items:center;justify-content:center;font-size:56px;box-shadow:0 0 50px rgba(124,92,255,.75),0 24px 60px rgba(0,0,0,.7)">🎁</div>
-      </div>
-      <div style="position:absolute;bottom:-44px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:12px;color:rgba(160,150,220,.55);letter-spacing:.6px;opacity:0;animation:subFade .5s 2s forwards">нажми чтобы открыть</div>
-    </div>
-
-    <!-- Курсор -->
-    <svg id="splash-cursor" viewBox="0 0 24 24"
-      style="position:absolute;top:50%;left:50%;width:38px;height:38px;opacity:0;transform-origin:top left;pointer-events:none;z-index:30;filter:drop-shadow(0 2px 12px rgba(0,0,0,.9)) drop-shadow(0 0 6px rgba(124,92,255,.5));animation:cursorMove 2.4s 1.6s cubic-bezier(.25,.46,.45,.94) forwards">
-      <defs>
-        <linearGradient id="cg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#ffffff"/>
-          <stop offset="100%" stop-color="#c8b0ff"/>
-        </linearGradient>
-      </defs>
-      <path d="M4 2 L20 11.5 L12.5 13.5 L9 20 Z" fill="url(#cg)" stroke="#7c5cff" stroke-width="1.2" stroke-linejoin="round"/>
-      <circle cx="4" cy="2" r="1.8" fill="#7c5cff" opacity=".9"/>
-    </svg>
-  </div>
-
-  <!-- Название -->
-  <div style="margin-top:38px;text-align:center;opacity:0;animation:titleFade .7s 1.1s ease forwards">
-    <div style="font-size:30px;font-weight:900;letter-spacing:-.8px;margin-bottom:5px;background:linear-gradient(135deg,#c0a0ff,#80c0ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent">CursorGift</div>
-    <div style="font-size:12px;color:#5060a0;letter-spacing:.5px;opacity:0;animation:subFade .5s 1.5s forwards">Telegram Gifts · Live · TON</div>
-    <div id="splash-user" style="font-size:12px;color:#7060b0;margin-top:7px;opacity:0;animation:subFade .4s 1.8s forwards"></div>
-  </div>
-
-  <!-- Прогресс -->
-  <div style="margin-top:32px;opacity:0;animation:subFade .4s 1.3s forwards">
-    <div style="width:160px;height:3px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden">
-      <div style="height:100%;width:0;background:linear-gradient(90deg,#7c5cff,#a480ff,#4d9fff);animation:loadBar 2.2s 1.4s cubic-bezier(.4,0,.6,1) forwards;border-radius:2px"></div>
-    </div>
-    <div style="margin-top:12px;display:flex;align-items:center;justify-content:center;gap:6px">
-      <div id="sstat" style="font-size:11px;color:#4050a0">Загрузка...</div>
-      <div style="display:flex;gap:3px">
-        <div style="width:5px;height:5px;border-radius:50%;background:#5060a0;animation:dotPulse 1.4s 0s ease-in-out infinite"></div>
-        <div style="width:5px;height:5px;border-radius:50%;background:#5060a0;animation:dotPulse 1.4s .25s ease-in-out infinite"></div>
-        <div style="width:5px;height:5px;border-radius:50%;background:#5060a0;animation:dotPulse 1.4s .5s ease-in-out infinite"></div>
+  <!-- Планшет -->
+  <div id="splash-tablet" style="position:relative;width:280px;height:200px;transform:scale(0.85);opacity:0;transition:none;">
+    
+    <!-- Корпус планшета -->
+    <div style="position:absolute;inset:0;background:linear-gradient(145deg,#2a2a3a,#1a1a28);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.25),0 4px 12px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.1);">
+      
+      <!-- Камера -->
+      <div style="position:absolute;top:8px;left:50%;transform:translateX(-50%);width:6px;height:6px;background:#111;border-radius:50%;box-shadow:0 0 0 1px #333;"></div>
+      
+      <!-- Экран планшета -->
+      <div id="tablet-screen" style="position:absolute;top:16px;left:8px;right:8px;bottom:8px;background:#f8f8ff;border-radius:12px;overflow:hidden;">
+        
+        <!-- Топбар внутри экрана -->
+        <div style="padding:8px 10px 4px;background:#fff;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:9px;font-weight:800;color:#1a1a2e;letter-spacing:-.3px;">Cursor Market</div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <div style="width:5px;height:5px;border-radius:50%;background:#22d47a;box-shadow:0 0 4px #22d47a;"></div>
+            <div style="font-size:7px;color:#22d47a;font-weight:700;">LIVE</div>
+          </div>
+        </div>
+        
+        <!-- Скролл-контейнер карточек -->
+        <div id="tablet-scroll" style="display:flex;flex-wrap:wrap;gap:4px;padding:6px;overflow:hidden;height:calc(100% - 28px);">
+          <!-- Карточки появятся динамически -->
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- Подарки которые летят -->
+  <div id="flying-gifts" style="position:absolute;inset:0;pointer-events:none;"></div>
+
+  <!-- Лого и статус снизу -->
+  <div id="splash-bottom" style="position:absolute;bottom:60px;left:0;right:0;text-align:center;opacity:0;transition:opacity .4s;">
+    <div style="font-size:22px;font-weight:900;color:#1a1a2e;letter-spacing:-.5px;margin-bottom:4px;">Cursor Market</div>
+    <div style="font-size:12px;color:#7c3aed;font-weight:600;letter-spacing:.3px;">Telegram Gifts Market</div>
+    <div id="splash-status" style="font-size:11px;color:#9ca3af;margin-top:8px;">Загружаем рынок...</div>
+  </div>
+
 </div>
 
 <!-- ═══ APP ═══ -->
@@ -1659,7 +1649,6 @@ async function init() {
   await loadProfileFallbackFromUrl();
   initTonConnect();
   bindFloatingNavAutoHide();
-  scheduleSplashAutoClick();
   setTimeout(saveProfile, 2500);
   if (walletAddress) setTimeout(()=>loadWalletData(true), 1200);
   const st=document.getElementById('sstat');
@@ -1680,6 +1669,7 @@ async function init() {
 
     if(st)st.textContent=`✅ ${GIFTS.length} подарков загружено`;
     splashReady=true;
+    startSplashWhenReady();
 
     connectWS();
     setInterval(fetchPrices,20000);
@@ -1693,9 +1683,222 @@ async function init() {
   }
 }
 
+// ═══ TABLET SPLASH ANIMATION ════════════════════════════════════
+const SPLASH_GIFTS = [
+  { slug:'snoopdogg',    name:'Snoop Dogg',    price:'3.16',  color:'#ffd700' },
+  { slug:'heroichelmet', name:'Heroic Helmet', price:'148.8', color:'#4d9fff' },
+  { slug:'plushpepe',    name:'Plush Pepe',    price:'4899',  color:'#22d47a' },
+  { slug:'electricskull',name:'Elec. Skull',   price:'120',   color:'#c77dff' },
+  { slug:'swisswatch',   name:'Swiss Watch',   price:'38.9',  color:'#f0b429' },
+  { slug:'petsnake',     name:'Pet Snake',     price:'2.0',   color:'#ff6eb4' },
+  { slug:'chillflame',   name:'Chill Flame',   price:'1.80',  color:'#ff4d6a' },
+  { slug:'lightsword',   name:'Light Sword',   price:'3.29',  color:'#22d47a' },
+];
+
+const STATUSES = [
+  'Загружаем рынок...',
+  'Получаем цены...',
+  'Подключаемся к Portal Market...',
+  '114 подарков найдено',
+  'Готово!'
+];
+
+function thumbUrl(slug) {
+  return 'https://fragment.com/file/gifts/' + slug + '/thumb.webp';
+}
+
+function createGiftCard(gift, small) {
+  var size = small ? 52 : 70;
+  var el = document.createElement('div');
+  el.style.cssText = [
+    'width:' + size + 'px;',
+    'background:#fff;',
+    'border-radius:' + (small ? 8 : 10) + 'px;',
+    'box-shadow:0 2px 8px rgba(0,0,0,.08);',
+    'overflow:hidden;',
+    'flex-shrink:0;',
+    'border:1px solid rgba(0,0,0,.06);',
+    'transition:transform .2s;'
+  ].join('');
+
+  var imgH = small ? 34 : 46;
+  el.innerHTML =
+    '<div style="height:' + imgH + 'px;display:flex;align-items:center;justify-content:center;padding:4px;">' +
+      '<img src="' + thumbUrl(gift.slug) + '" style="max-width:100%;max-height:100%;object-fit:contain;" onerror="this.style.opacity=.3"/>' +
+    '</div>' +
+    '<div style="padding:2px 4px 4px;text-align:center;">' +
+      '<div style="font-size:' + (small ? 5.5 : 7) + 'px;font-weight:700;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + gift.name + '</div>' +
+      '<div style="font-size:' + (small ? 6 : 7.5) + 'px;font-weight:800;color:#7c3aed;margin-top:1px;">' + gift.price + ' TON</div>' +
+    '</div>';
+  return el;
+}
+
+function createFlyingGift(gift, targetEl) {
+  var tablet = document.getElementById('splash-tablet');
+  if (!tablet) return;
+
+  var tRect = tablet.getBoundingClientRect();
+  var tCX = tRect.left + tRect.width / 2;
+  var tCY = tRect.top + tRect.height / 2;
+
+  var container = document.getElementById('flying-gifts');
+  var el = document.createElement('div');
+  el.style.cssText = 'position:absolute;z-index:10;pointer-events:none;will-change:transform,opacity;';
+
+  // Стартовая позиция — случайная сторона экрана
+  var side = Math.floor(Math.random() * 4);
+  var sw = window.innerWidth, sh = window.innerHeight;
+  var sx, sy;
+  if (side === 0) { sx = Math.random() * sw; sy = -70; }
+  else if (side === 1) { sx = sw + 70; sy = Math.random() * sh; }
+  else if (side === 2) { sx = Math.random() * sw; sy = sh + 70; }
+  else { sx = -70; sy = Math.random() * sh; }
+
+  el.style.left = sx + 'px';
+  el.style.top = sy + 'px';
+
+  var size = 56;
+  el.innerHTML =
+    '<div style="width:' + size + 'px;height:' + size + 'px;background:#fff;border-radius:14px;' +
+    'box-shadow:0 4px 20px rgba(0,0,0,.15);border:1px solid rgba(0,0,0,.06);' +
+    'display:flex;align-items:center;justify-content:center;overflow:hidden;">' +
+      '<img src="' + thumbUrl(gift.slug) + '" style="width:40px;height:40px;object-fit:contain;" onerror="this.style.opacity=.3"/>' +
+    '</div>';
+
+  container.appendChild(el);
+
+  // Анимация полёта к центру планшета
+  var startAngle = Math.random() * 720 - 360;
+  var duration = 700 + Math.random() * 300;
+
+  el.animate([
+    { transform: 'translate(0,0) rotate(' + startAngle + 'deg) scale(1)', opacity: 0 },
+    { transform: 'translate(0,0) rotate(' + startAngle + 'deg) scale(1)', opacity: 1, offset: 0.05 },
+    { transform: 'translate(' + (tCX - sx - size/2) + 'px,' + (tCY - sy - size/2) + 'px) rotate(0deg) scale(0.6)', opacity: 0.8, offset: 0.85 },
+    { transform: 'translate(' + (tCX - sx - size/2) + 'px,' + (tCY - sy - size/2) + 'px) rotate(0deg) scale(0)', opacity: 0 }
+  ], {
+    duration: duration,
+    easing: 'cubic-bezier(.4,0,.2,1)',
+    fill: 'forwards'
+  }).onfinish = function() {
+    el.remove();
+    // Планшет слегка покачивается
+    var t = document.getElementById('splash-tablet');
+    if (t) {
+      t.animate([
+        { transform: t.style.transform || 'scale(1)' },
+        { transform: (t.style.transform || 'scale(1)') + ' rotate(-1.5deg)' },
+        { transform: (t.style.transform || 'scale(1)') + ' rotate(1deg)' },
+        { transform: t.style.transform || 'scale(1)' }
+      ], { duration: 300, easing: 'ease-out' });
+    }
+  };
+}
+
+function runTabletScroll(cards, onDone) {
+  var scroll = document.getElementById('tablet-scroll');
+  if (!scroll) { onDone(); return; }
+
+  // Показываем все карточки
+  cards.forEach(function(g) {
+    scroll.appendChild(createGiftCard(g, true));
+  });
+
+  // Скролл вниз
+  var total = scroll.scrollHeight - scroll.clientHeight;
+  if (total <= 0) { setTimeout(onDone, 500); return; }
+
+  var start = null;
+  var dur = 1800;
+
+  function step(ts) {
+    if (!start) start = ts;
+    var p = Math.min((ts - start) / dur, 1);
+    var ease = p < 0.5 ? 2*p*p : -1+(4-2*p)*p; // easeInOut
+    scroll.scrollTop = ease * total;
+    if (p < 1) requestAnimationFrame(step);
+    else setTimeout(onDone, 400);
+  }
+  requestAnimationFrame(step);
+}
+
+function runTabletZoom(onDone) {
+  var tablet = document.getElementById('splash-tablet');
+  if (!tablet) { onDone(); return; }
+
+  // Планшет надвигается — увеличивается и едет вверх как будто подносишь к глазам
+  var anim = tablet.animate([
+    { transform: 'scale(1) translateY(0px)',   opacity: 1 },
+    { transform: 'scale(1.6) translateY(-20px)', opacity: 1, offset: 0.4 },
+    { transform: 'scale(4) translateY(-60px)',  opacity: 1, offset: 0.75 },
+    { transform: 'scale(9) translateY(-120px)', opacity: 0 }
+  ], {
+    duration: 1200,
+    easing: 'cubic-bezier(.4,0,.6,1)',
+    fill: 'forwards'
+  });
+  anim.onfinish = onDone;
+}
+
+function runSplashAnimation() {
+  var tablet = document.getElementById('splash-tablet');
+  var bottom = document.getElementById('splash-bottom');
+  var statusEl = document.getElementById('splash-status');
+
+  if (!tablet) { splashClick(); return; }
+
+  // Шаг 1: Планшет появляется
+  setTimeout(function() {
+    tablet.style.transition = 'opacity .5s ease, transform .6s cubic-bezier(.34,1.56,.64,1)';
+    tablet.style.opacity = '1';
+    tablet.style.transform = 'scale(1)';
+  }, 200);
+
+  // Шаг 2: Лого появляется снизу
+  setTimeout(function() {
+    if (bottom) bottom.style.opacity = '1';
+  }, 600);
+
+  // Шаг 3: Подарки залетают один за одним
+  var delay = 900;
+  SPLASH_GIFTS.forEach(function(gift, i) {
+    setTimeout(function() {
+      createFlyingGift(gift, tablet);
+      // Обновляем статус
+      if (statusEl && STATUSES[i]) statusEl.textContent = STATUSES[i];
+    }, delay + i * 220);
+  });
+
+  // Шаг 4: Прокрутка карточек внутри планшета
+  var scrollStart = delay + SPLASH_GIFTS.length * 220 + 400;
+  setTimeout(function() {
+    if (statusEl) statusEl.textContent = '114 подарков найдено';
+    runTabletScroll(SPLASH_GIFTS, function() {
+
+      // Шаг 5: Планшет надвигается на экран
+      setTimeout(function() {
+        if (statusEl) statusEl.textContent = 'Готово!';
+        runTabletZoom(function() {
+          splashClick();
+        });
+      }, 300);
+    });
+  }, scrollStart);
+}
+
+// Запускаем как только данные загрузились
+var _splashAnimStarted = false;
+function startSplashWhenReady() {
+  if (_splashAnimStarted) return;
+  _splashAnimStarted = true;
+  runSplashAnimation();
+}
+// ═══ END TABLET SPLASH ══════════════════════════════════════════
+
 init();
 </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fe96e403a04eebe',t:'MTc3OTI2MDA3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ff3df928ac7eecd',t:'MTc3OTM2OTU3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ff3df928ac7eecd',t:'MTc3OTM2OTU3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
 </html>
