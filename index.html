@@ -43,6 +43,74 @@ html, body { font-size: var(--fs-base); }
 
 /* Fluid back btn */
 .back { width:clamp(34px,9vw,42px); height:clamp(34px,9vw,42px); font-size:clamp(17px,5vw,22px); }
+
+/* --- Arena Premium UI Fixes --- */
+:root {
+  --app-w: min(100vw, 480px);
+  --glass: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --accent: #7c5cff;
+}
+
+body {
+  background: #000 !important;
+  display: flex !important;
+  justify-content: center !important;
+  margin: 0;
+  padding: 0;
+}
+
+.app {
+  max-width: var(--app-w) !important;
+  margin: 0 auto !important;
+  background: #080810 !important;
+  box-shadow: 0 0 100px rgba(0,0,0,0.8) !important;
+  min-height: 100vh;
+  min-height: 100dvh;
+  position: relative !important;
+}
+
+.glass-card {
+  background: var(--glass) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 24px !important;
+}
+
+.ton-logo {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: middle;
+  background: url('https://ton.org/download/ton_symbol.svg') center/contain no-repeat;
+  margin-right: 4px;
+}
+
+.market-header-premium {
+  background: linear-gradient(-45deg, #0d0820, #1a0b3a, #080810, #141425);
+  background-size: 400% 400%;
+  animation: meshGradient 15s ease infinite;
+  padding: 24px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+@keyframes meshGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Фикс скролла Upgrade */
+.crt-content {
+  max-height: 100% !important;
+  overflow-y: auto !important;
+  padding-bottom: 50px !important;
+}
+.crt-screen {
+  height: clamp(400px, 60vh, 600px) !important;
+}
+
 </style>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -281,6 +349,20 @@ let walletBalance = 0;
 let walletGifts = [];
 let walletLoading = false;
 let walletLastUpdate = 0;
+
+
+function buildAvatar(user, size = 64) {
+    const color = user?.color || '#7c5cff';
+    const initials = user?.initials || '?';
+    const photo = user?.photo || user?.avatar;
+    if (photo) {
+        return `<div style="width:${size}px; height:${size}px; border-radius:50%; border:2px solid rgba(255,255,255,0.1); overflow:hidden; position:relative; display:inline-block;">
+            <img src="${photo}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div style="display:none; width:100%; height:100%; align-items:center; justify-content:center; background:linear-gradient(135deg, ${color}, ${color}99); color:#fff; font-size:${size/2.5}px; font-weight:900;">${initials}</div>
+        </div>`;
+    }
+    return `<div style="width:${size}px; height:${size}px; border-radius:50%; background:linear-gradient(135deg, ${color}, ${color}99); display:flex; align-items:center; justify-content:center; font-size:${size/2.5}px; font-weight:900; color:#fff; border:2px solid rgba(255,255,255,0.1); display:inline-block;">${initials}</div>`;
+}
 
 function initTgUser() {
   if (tg) {
@@ -710,7 +792,7 @@ async function connectTonWallet(){
   // Fallback, если SDK не загрузился (например, в sandbox preview без сети)
   if (tg?.openLink) tg.openLink('https://app.tonkeeper.com/ton-connect');
   else window.open('https://app.tonkeeper.com/ton-connect','_blank');
-  showToast('💎 TON Connect', 'Открой в браузере/Telegram, чтобы подключить кошелёк');
+  showToast('<i class="ton-logo"></i> TON Connect', 'Открой в браузере/Telegram, чтобы подключить кошелёк');
 }
 async function disconnectTonWallet(){
   try { await tonConnectUI?.disconnect?.(); } catch(e){}
@@ -754,7 +836,7 @@ function walletCardHtml(){
   if (!walletAddress) {
     return `<div style="margin:14px 16px 0;background:linear-gradient(135deg,rgba(77,159,255,.12),rgba(124,92,255,.08));border:1px solid rgba(77,159,255,.25);border-radius:16px;padding:14px">
       <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:42px;height:42px;border-radius:12px;background:rgba(77,159,255,.12);display:flex;align-items:center;justify-content:center;font-size:22px">💎</div>
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(77,159,255,.12);display:flex;align-items:center;justify-content:center;font-size:22px"><i class="ton-logo"></i></div>
         <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;color:#f0f0ff">TON-кошелёк не подключён</div><div style="font-size:11px;color:#7080a0;margin-top:2px">Подключи Tonkeeper / Wallet, чтобы увидеть баланс и подарки</div></div>
       </div>
       <button onclick="connectTonWallet()" style="margin-top:12px;width:100%;padding:12px;border-radius:13px;background:linear-gradient(135deg,#4d9fff,#7c5cff);color:#fff;font-size:13px;font-weight:800;box-shadow:0 6px 20px rgba(77,159,255,.25)">🔗 Подключить кошелёк</button>
@@ -774,7 +856,7 @@ function walletCardHtml(){
   </div>`;
 }
 function marketWalletButtonHtml(){
-  if (walletAddress) return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(34,212,122,.08);border:1px solid rgba(34,212,122,.22);border-radius:10px;padding:6px 11px;color:#22d47a;font-size:11px;font-weight:800">💎 ${fmtTon(walletBalance,3)} TON · ${esc(shortAddr(walletAddress))}</button>`;
+  if (walletAddress) return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(34,212,122,.08);border:1px solid rgba(34,212,122,.22);border-radius:10px;padding:6px 11px;color:#22d47a;font-size:11px;font-weight:800"><i class="ton-logo"></i> ${fmtTon(walletBalance,3)} TON · ${esc(shortAddr(walletAddress))}</button>`;
   return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(124,92,255,.10);border:1px solid rgba(124,92,255,.28);border-radius:10px;padding:6px 11px;color:#a480ff;font-size:11px;font-weight:800">🔗 Подключить кошелёк</button>`;
 }
 
@@ -960,62 +1042,21 @@ function renderMarket() {
   const pg=document.getElementById('pg-market');
   const topG=GIFTS.length?GIFTS.reduce((b,g)=>(prices[g.slug]?.vol24h||0)>(prices[b.slug]?.vol24h||0)?g:b,GIFTS[0]):null;
   pg.innerHTML=`
-<!-- ═══ MARKET HEADER ═══ -->
-<div style="position:relative;overflow:hidden;background:linear-gradient(170deg,#0d0820 0%,#080810 100%);">
 
-  <!-- Фоновый паттерн -->
-  <div style="position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 70% 40%,rgba(124,92,255,.18) 0%,transparent 60%),radial-gradient(ellipse 60% 80% at 20% 80%,rgba(77,159,255,.1) 0%,transparent 60%);pointer-events:none;"></div>
-
-  <!-- Баннер-изображение как текстура -->
-  <div style="position:absolute;inset:0;opacity:.12;background:url('https://i.imgur.com/2b2hhDc.png') center/cover no-repeat;filter:blur(8px);transform:scale(1.1);"></div>
-
-  <div style="position:relative;padding:clamp(14px,4vw,20px) clamp(14px,4vw,20px) clamp(10px,3vw,16px);">
-
-    <!-- Строка 1: Лого + онлайн + таймер -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(10px,3vw,16px);">
-      <div style="display:flex;align-items:center;gap:clamp(6px,2vw,10px);">
-        <div style="position:relative;">
-          <img src="https://i.imgur.com/2b2hhDc.png" style="width:clamp(36px,10vw,48px);height:clamp(36px,10vw,48px);border-radius:clamp(10px,3vw,14px);object-fit:cover;border:1.5px solid rgba(124,92,255,.5);box-shadow:0 4px 16px rgba(124,92,255,.3);" onerror="this.style.display='none'"/>
-          <div style="position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;background:#22d47a;border-radius:50%;border:2px solid #080810;box-shadow:0 0 6px #22d47a;animation:pulse 2s infinite;"></div>
-        </div>
-        <div>
-          <div style="font-size:clamp(18px,5vw,24px);font-weight:900;letter-spacing:-.6px;line-height:1;">Cursor Market</div>
-          <div style="font-size:clamp(9px,2.5vw,11px);color:#22d47a;font-weight:600;letter-spacing:.4px;margin-top:1px;">LIVE · Portal Market</div>
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:clamp(4px,1.5vw,6px);">
-        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(34,212,122,.1);border:1px solid rgba(34,212,122,.25);border-radius:20px;padding:4px 10px;">
-          <div style="width:5px;height:5px;border-radius:50%;background:#22d47a;animation:pulse 2s infinite;"></div>
-          <span style="font-size:clamp(9px,2.5vw,11px);color:#22d47a;font-weight:700;" class="online-count">0</span>
-          <span style="font-size:clamp(9px,2.5vw,11px);color:#22d47a;font-weight:600;">онлайн</span>
-        </div>
-        <div style="font-size:clamp(9px,2.5vw,10px);color:#404060;background:rgba(255,255,255,.05);border-radius:6px;padding:2px 8px;font-weight:600;" id="update-timer">↻ ${countdown}с</div>
-      </div>
+<div class="market-header-premium">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+       <div>
+          <h1 style="font-size:26px; font-weight:950; margin:0; letter-spacing:-0.8px;">Cursor Market</h1>
+          <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+            <div style="width:7px; height:7px; background:#22d47a; border-radius:50%; box-shadow:0 0 8px #22d47a; animation: pulse 2s infinite;"></div>
+            <span style="font-size:11px; color:#22d47a; font-weight:800;">LIVE NETWORK</span>
+          </div>
+       </div>
+       <div style="text-align:right;">
+          <div style="font-size:18px; font-weight:900; color:#f0b429;"><i class="ton-logo"></i>$${tonUsd.toFixed(2)}</div>
+          <div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700;">TON/USD</div>
+       </div>
     </div>
-
-    <!-- Строка 2: Три метрики -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(6px,2vw,10px);margin-bottom:clamp(10px,3vw,16px);">
-      <!-- TON цена -->
-      <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:clamp(10px,3vw,14px);padding:clamp(8px,2.5vw,12px) clamp(8px,2.5vw,12px);">
-        <div style="font-size:clamp(8px,2.2vw,10px);color:#808090;font-weight:600;letter-spacing:.3px;margin-bottom:3px;">TON/USD</div>
-        <div style="font-size:clamp(13px,3.8vw,17px);font-weight:900;color:#f0b429;letter-spacing:-.3px;" id="ton-price">$${tonUsd.toFixed(2)}</div>
-        <div style="font-size:clamp(8px,2vw,9px);color:#505070;margin-top:2px;">Курс сейчас</div>
-      </div>
-      <!-- Подарков -->
-      <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:clamp(10px,3vw,14px);padding:clamp(8px,2.5vw,12px) clamp(8px,2.5vw,12px);">
-        <div style="font-size:clamp(8px,2.2vw,10px);color:#808090;font-weight:600;letter-spacing:.3px;margin-bottom:3px;">КОЛЛЕКЦИЙ</div>
-        <div style="font-size:clamp(13px,3.8vw,17px);font-weight:900;color:#a480ff;letter-spacing:-.3px;">${GIFTS.length}</div>
-        <div style="font-size:clamp(8px,2vw,9px);color:#505070;margin-top:2px;">На рынке</div>
-      </div>
-      <!-- Топ объём -->
-      <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:clamp(10px,3vw,14px);padding:clamp(8px,2.5vw,12px) clamp(8px,2.5vw,12px);cursor:pointer;" onclick="topG&&openDetail(topG.slug)">
-        <div style="font-size:clamp(8px,2.2vw,10px);color:#808090;font-weight:600;letter-spacing:.3px;margin-bottom:3px;">ТОП ОБЪЁМ</div>
-        <div style="font-size:clamp(11px,3.2vw,14px);font-weight:800;color:#4d9fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${topG?topG.name:'—'}</div>
-        <div style="font-size:clamp(8px,2vw,9px);color:#22d47a;margin-top:2px;">${topG?(prices[topG.slug]?.vol24h||0).toFixed(0)+' TON/24ч':'—'}</div>
-      </div>
-    </div>
-
-  </div>
 </div>
 <div style="padding:12px 16px 0">
   <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:9px 13px">
@@ -1130,7 +1171,7 @@ function dtab(t){
 }
 
 function dtInfo(g,p){
-  const rows=[['💰 Floor',`<strong style="color:#f0b429">${(p.floor||0).toFixed(2)} TON</strong> · $${((p.floor||0)*tonUsd).toFixed(0)}`],['📈 24ч',`<span style="color:${(p.change24h||0)>=0?'#22d47a':'#ff4d6a'}">${(p.change24h||0)>=0?'+':''}${p.change24h||0}%</span>`],['📊 Объём',`${(p.vol24h||0).toFixed(0)} TON`],['🛒 Сделок',`${p.sales24h||0}`],['📋 Листинги',`${p.listed||0}`],['🏭 Supply',`${(p.supply||0).toLocaleString()}`],['💎 Market Cap',`${((p.marketCap||0)/1000).toFixed(1)}K TON`],['🕒 Обновлено',p.updated?new Date(p.updated).toLocaleTimeString('ru'):'—']];
+  const rows=[['💰 Floor',`<strong style="color:#f0b429">${(p.floor||0).toFixed(2)} TON</strong> · $${((p.floor||0)*tonUsd).toFixed(0)}`],['📈 24ч',`<span style="color:${(p.change24h||0)>=0?'#22d47a':'#ff4d6a'}">${(p.change24h||0)>=0?'+':''}${p.change24h||0}%</span>`],['📊 Объём',`${(p.vol24h||0).toFixed(0)} TON`],['🛒 Сделок',`${p.sales24h||0}`],['📋 Листинги',`${p.listed||0}`],['🏭 Supply',`${(p.supply||0).toLocaleString()}`],['<i class="ton-logo"></i> Market Cap',`${((p.marketCap||0)/1000).toFixed(1)}K TON`],['🕒 Обновлено',p.updated?new Date(p.updated).toLocaleTimeString('ru'):'—']];
   return `<div style="animation:fadeIn .2s ease">${rows.map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0">${v}</span></div>`).join('')}
 <div style="margin-top:14px;display:flex;gap:9px">
 <a href="https://fragment.com/gifts/${g.slug}" target="_blank" style="flex:1;padding:10px;border-radius:12px;background:rgba(124,92,255,.12);border:1px solid rgba(124,92,255,.3);color:#a480ff;font-size:11px;font-weight:700;text-align:center">🔗 Fragment</a>
@@ -1529,7 +1570,7 @@ function renderNews(){
   if(topSales && topSales.slug!==topVol?.slug){
     const p=prices[topSales.slug]||{};
     news.push({
-      e:'💎',
+      e:'<i class="ton-logo"></i>',
       t:`${topSales.name} — больше всего продаж`,
       b:`${p.sales24h||0} сделок за 24ч · Floor: ${(p.floor||0).toFixed(2)} TON · Объём: ${(p.vol24h||0).toFixed(0)} TON`,
       gid:topSales.slug, tp:'hot', time:Date.now()-(Math.random()*7200000), tags:['#продажи']
@@ -1600,40 +1641,42 @@ ${g?`<div style="display:inline-flex;align-items:center;gap:7px;margin-top:9px;b
 }
 
 // ═══ PROFILE ═══
+
 function renderProfile(){
   const inv=profileGiftList();
   const u=TG_USER||{};
   document.getElementById('pg-prof').innerHTML=`<div style="animation:fadeIn .25s ease">
-<div style="background:linear-gradient(145deg,#150830 0%,#0a0518 60%,#080810 100%);padding:0;position:relative;overflow:hidden;border-bottom:1px solid rgba(124,92,255,.15)">
-<div style="position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(124,92,255,.22) 0%,transparent 70%);border-radius:50%"></div>
-<div style="padding:24px 16px 20px;position:relative">
-<div style="position:absolute;top:16px;right:16px"><div class="online-badge"><div class="online-dot"></div><span style="font-size:10px;color:#22d47a;font-weight:700"><span class="online-count">${onlineCount}</span> онлайн</span></div></div>
-<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
-<div style="position:relative;flex-shrink:0">
-${avatarHtml(76)}
-${u.isPremium?`<div style="position:absolute;bottom:-3px;right:-3px;background:linear-gradient(135deg,#f0b429,#ff8c00);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;border:2px solid #080810">⭐</div>`:''}
-<div style="position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#22d47a;border:2px solid #080810;box-shadow:0 0 6px #22d47a"></div>
-</div>
-<div style="flex:1;min-width:0">
-${u.id?`<div style="font-size:22px;font-weight:900;color:#f0f0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.name)}</div>
-<div style="font-size:13px;color:#7c5cff;margin-top:2px;font-weight:600">${esc(u.displayUsername || u.username || 'Без username')}</div>
-<div style="font-size:10px;color:#404060;margin-top:2px;font-family:monospace">ID ${esc(u.id)}</div>`
-:`<div style="font-size:16px;font-weight:700;color:#808090">Открой в Telegram</div><div style="font-size:12px;color:#505070;margin-top:3px">для отображения профиля</div>`}
-<div style="display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:4px 10px;border-radius:8px;${u.isPremium?'background:rgba(240,180,41,.15);border:1px solid rgba(240,180,41,.3)':'background:rgba(124,92,255,.12);border:1px solid rgba(124,92,255,.25)'}">
-<span style="font-size:13px">${u.isPremium?'⭐':'🎁'}</span>
-<span style="font-size:10px;font-weight:700;color:${u.isPremium?'#f0b429':'#a480ff'}">${u.isPremium?'Telegram Premium':'Telegram Mini App'}</span>
-</div>
-</div></div>
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-${[['💎',fmtTon(walletBalance,3)+' TON','#f0b429','Баланс'],['🎁',inv.length,'#22d47a','Подарки'],['📊',GIFTS.length,'#7c5cff','На рынке']].map(([ic,v,c,l])=>`<div style="background:rgba(255,255,255,.06);border-radius:14px;padding:12px 8px;text-align:center;border:1px solid rgba(255,255,255,.07)"><div style="font-size:18px;margin-bottom:4px">${ic}</div><div style="font-size:13px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:#505070;margin-top:2px">${l}</div></div>`).join('')}
-</div></div></div>
-${walletCardHtml()}
+    <div style="padding: 40px 16px 30px; text-align:center; position:relative;">
+        <div style="margin-bottom:20px; position:relative; display:inline-block;">
+            ${buildAvatar(u, 96)}
+            ${u.isPremium ? '<div style="position:absolute; bottom:0; right:0; background:#f0b429; border-radius:50%; width:26px; height:24px; display:flex; align-items:center; justify-content:center; border:3px solid #080810; font-size:12px;">⭐</div>' : ''}
+        </div>
+        <h1 style="font-size:26px; font-weight:950; margin:0; letter-spacing:-0.5px;">${esc(u.name)}</h1>
+        <div style="color:#7c5cff; font-weight:600; font-size:14px; margin-top:4px;">${esc(u.displayUsername || u.username || 'Без username')}</div>
+    </div>
 
-<div style="display:flex;border-bottom:1px solid rgba(255,255,255,.07);position:sticky;top:0;background:#080810;z-index:5;margin-top:14px">
-${[['inv','🎁 Подарки'],['wheel','🎡 Игры'],['settings','⚙️ Инфо']].map(([t,l])=>`<button id="ptb-${t}" onclick="switchPTab('${t}')" style="flex:1;padding:11px 4px;font-size:11px;font-weight:600;border-bottom:${t==='inv'?'2px solid #7c5cff':'2px solid transparent'};color:${t==='inv'?'#a480ff':'#505070'};cursor:pointer;margin-bottom:-1px">${l}</button>`).join('')}
-</div>
-<div id="ptcontent" style="padding:14px">${pInv(inv)}</div>
-</div>`;
+    <div class="glass-card" style="margin: 0 16px 16px; display:flex; justify-content:space-around; padding:20px;">
+        <div style="text-align:center;">
+            <div style="font-size:20px; font-weight:900;">${inv.length}</div>
+            <div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700;">GIFTS</div>
+        </div>
+        <div style="text-align:center;">
+            <div style="font-size:20px; font-weight:900; color:#f0b429;"><i class="ton-logo"></i>${walletBalance.toFixed(2)}</div>
+            <div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700;">TON</div>
+        </div>
+        <div style="text-align:center;">
+            <div style="font-size:20px; font-weight:900; color:#4d9fff;">${onlineCount}</div>
+            <div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700;">ONLINE</div>
+        </div>
+    </div>
+
+    ${walletCardHtml()}
+
+    <div style="padding: 20px 16px 0;">
+        <div style="font-size:13px; font-weight:800; color:rgba(255,255,255,0.5); margin-bottom:15px; letter-spacing:1px;">MY INVENTORY</div>
+        <div id="ptcontent">${pInv(inv)}</div>
+    </div>
+  </div>`;
 }
 
 function switchPTab(t){
@@ -1693,7 +1736,7 @@ ${[['🔗 Источник цен','Portal Market'],['⏱ Обновление',
 </div>
 <div style="background:rgba(255,255,255,.03);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.06)">
 <div style="font-size:10px;color:#505070;font-weight:700;margin-bottom:12px;letter-spacing:.5px">КОШЕЛЁК</div>
-${[['💎 Адрес',walletAddress?shortAddr(walletAddress):'не подключён'],['💰 Баланс',fmtTon(walletBalance,4)+' TON'],['🎁 Telegram Gifts',String(walletGifts.length)],['🕒 Обновлено',walletLastUpdate?new Date(walletLastUpdate).toLocaleTimeString('ru'):'—']].map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:12px"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0;text-align:right">${esc(v)}</span></div>`).join('')}
+${[['<i class="ton-logo"></i> Адрес',walletAddress?shortAddr(walletAddress):'не подключён'],['💰 Баланс',fmtTon(walletBalance,4)+' TON'],['🎁 Telegram Gifts',String(walletGifts.length)],['🕒 Обновлено',walletLastUpdate?new Date(walletLastUpdate).toLocaleTimeString('ru'):'—']].map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:12px"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0;text-align:right">${esc(v)}</span></div>`).join('')}
 </div>
 <a href="https://fragment.com/gifts" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#808090;font-size:13px;font-weight:700">🔗 Fragment.com</a>
 </div>`;
@@ -1953,9 +1996,6 @@ function startSplashWhenReady() {
 
 init();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fe96e403a04eebe',t:'MTc3OTI2MDA3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ff3df928ac7eecd',t:'MTc3OTM2OTU3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a006c6ee7bba23b0',t:'MTc3OTU2Nzc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0130e0518df8b93',t:'MTc3OTY5NjUzMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
