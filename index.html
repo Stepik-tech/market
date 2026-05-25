@@ -44,17 +44,73 @@ html, body { font-size: var(--fs-base); }
 /* Fluid back btn */
 .back { width:clamp(34px,9vw,42px); height:clamp(34px,9vw,42px); font-size:clamp(17px,5vw,22px); }
 
-/* --- Arena v14: Final Pro Charts --- */
-:root { --app-w: min(100vw, 450px); --accent: #7c5cff; }
-body { background: #000 !important; display: flex !important; justify-content: center !important; margin: 0; }
-.app { width: var(--app-w); background: #080810; box-shadow: 0 0 100px #000; min-height: 100dvh; position: relative; display: flex; flex-direction: column; overflow: hidden; }
+/* --- Arena v15: Classic UI + Pro Charts --- */
+:root {
+  --app-w: min(100vw, 450px);
+  --glass-v15: rgba(255, 255, 255, 0.06);
+  --accent-v15: #7c5cff;
+}
 
-.sparkline-box { width: 100%; height: 35px; margin-top: 8px; }
-.trade-modal-final { position: fixed; inset: 0; z-index: 9999; background: #080810; display: none; flex-direction: column; animation: slideUp 0.3s ease; }
-.time-btn { padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.05); color: #808090; font-size: 11px; font-weight: 800; border: none; }
-.time-btn.on { background: rgba(124,92,255,0.2); color: #a480ff; border: 1px solid rgba(124,92,255,0.3); }
+body {
+  background: #000 !important;
+  display: flex !important;
+  justify-content: center !important;
+  margin: 0;
+}
 
-.ton-icon-final { width: 16px; height: 16px; display: inline-block; vertical-align: middle; background: url('https://ton.org/download/ton_symbol.svg') center/contain no-repeat; margin-right: 4px; }
+.app {
+  width: var(--app-w) !important;
+  max-width: var(--app-w) !important;
+  background: #080810 !important;
+  box-shadow: 0 0 100px #000 !important;
+  min-height: 100dvh;
+  position: relative !important;
+  overflow-x: hidden;
+}
+
+/* Стили терминала */
+.terminal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(8, 8, 16, 0.95);
+    backdrop-filter: blur(20px);
+    display: none;
+    flex-direction: column;
+    animation: fadeIn 0.2s ease;
+}
+
+.ton-icon-v15 {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+    vertical-align: middle;
+    background: url('https://ton.org/download/ton_symbol.svg') center/contain no-repeat;
+    margin-right: 4px;
+}
+
+/* Исправленный баннер */
+.banner-container {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 12px;
+    padding: 15px 16px;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+}
+.banner-card {
+    flex: 0 0 100%;
+    scroll-snap-align: center;
+    background: var(--glass-v15);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 24px;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-sizing: border-box;
+}
 
 </style>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -294,6 +350,80 @@ let walletBalance = 0;
 let walletGifts = [];
 let walletLoading = false;
 let walletLastUpdate = 0;
+
+
+function getDetailedPoints(slug, hours = 24) {
+    let pts = histories[slug] || [];
+    if (pts.length === 0 && prices[slug]) pts = [{time: Date.now()-60000, price: prices[slug].floor}, {time: Date.now(), price: prices[slug].floor}];
+    if (hours < 9999) {
+        const cutoff = Date.now() - hours * 3600000;
+        pts = pts.filter(p => p.time >= cutoff);
+    }
+    return pts;
+}
+
+function openProTerminal(slug) {
+    const g = GIFTS.find(x => x.slug === slug);
+    const p = prices[slug] || {floor:0, change24h:0};
+    let modal = document.getElementById('pro-terminal');
+    if(!modal) {
+        modal = document.createElement('div');
+        modal.id = 'pro-terminal';
+        modal.className = 'terminal-overlay';
+        document.body.appendChild(modal);
+    }
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div style="padding:20px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <img src="https://fragment.com/file/gifts/${slug}/thumb.webp" style="width:40px; height:40px;">
+                <div><div style="font-size:18px; font-weight:900;">${g.name}</div><div style="font-size:11px; color:#22d47a;">LIVE EXCHANGE</div></div>
+            </div>
+            <button onclick="document.getElementById('pro-terminal').style.display='none'" style="color:#fff; font-size:24px; background:none;">✕</button>
+        </div>
+        <div style="padding:20px;">
+            <div style="font-size:12px; opacity:0.4;">PRICE</div>
+            <div style="font-size:38px; font-weight:950;">${p.floor.toFixed(2)} <span style="font-size:16px; opacity:0.4;">TON</span></div>
+        </div>
+        <div id="full-pro-chart" style="width:100%; height:300px; position:relative; margin:20px 0;"></div>
+        <div style="display:flex; gap:10px; padding:0 20px;">
+            ${[1, 6, 24, 168, 9999].map(h => `<button onclick="drawFullChart('${slug}', ${h})" style="flex:1; padding:10px; border-radius:12px; background:rgba(255,255,255,0.05); color:#fff; border:none; font-weight:700;">${h>1000?'ALL':h+'H'}</button>`).join('')}
+        </div>
+        <div style="padding:20px; margin-top:auto; padding-bottom:40px;">
+            <button onclick="window.open('https://fragment.com/gifts/${slug}')" style="width:100%; padding:20px; border-radius:24px; background:#7c5cff; color:#fff; font-size:16px; font-weight:900; border:none;">BUY ON FRAGMENT</button>
+        </div>
+    `;
+    drawFullChart(slug, 24);
+}
+
+function drawFullChart(slug, hours) {
+    const container = document.getElementById('full-pro-chart');
+    if(!container) return;
+    const pts = getDetailedPoints(slug, hours);
+    const W = container.offsetWidth, H = container.offsetHeight;
+    const pArr = pts.map(p => p.price);
+    const min = Math.min(...pArr), max = Math.max(...pArr), range = (max - min) || 0.1;
+    const color = pts[pts.length-1].price >= pts[0].price ? '#22d47a' : '#ff4d6a';
+    const path = pts.map((p, i) => `${i*(W/(pts.length-1))},${H - ((p.price-min)/range)*H*0.7 - H*0.15}`).join(' ');
+    
+    container.innerHTML = `
+        <div id="cross-v" style="position:absolute; top:0; bottom:0; width:1px; background:rgba(255,255,255,0.2); display:none;"></div>
+        <div id="chart-tip" style="position:absolute; background:#1a1a2e; padding:8px; border-radius:10px; display:none; border:1px solid #333; z-index:10; font-size:12px;"></div>
+        <svg width="100%" height="100%" style="overflow:visible">
+            <path d="M ${path}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+    `;
+    
+    container.onmousemove = (e) => {
+        const x = e.offsetX;
+        const idx = Math.round(x / (W / (pts.length - 1)));
+        const point = pts[Math.max(0, Math.min(pts.length-1, idx))];
+        const cv = document.getElementById('cross-v'), tip = document.getElementById('chart-tip');
+        cv.style.display = 'block'; cv.style.left = x + 'px';
+        tip.style.display = 'block'; tip.style.left = Math.min(x+10, W-100)+'px'; tip.style.top = '10px';
+        tip.innerHTML = `<b style="color:${color}">${point.price.toFixed(2)} TON</b><br>${new Date(point.time).toLocaleTimeString()}`;
+    };
+}
 
 function initTgUser() {
   if (tg) {
@@ -723,7 +853,7 @@ async function connectTonWallet(){
   // Fallback, если SDK не загрузился (например, в sandbox preview без сети)
   if (tg?.openLink) tg.openLink('https://app.tonkeeper.com/ton-connect');
   else window.open('https://app.tonkeeper.com/ton-connect','_blank');
-  showToast('<i class="ton-icon-final"></i> TON Connect', 'Открой в браузере/Telegram, чтобы подключить кошелёк');
+  showToast('<i class="ton-icon-v15"></i> TON Connect', 'Открой в браузере/Telegram, чтобы подключить кошелёк');
 }
 async function disconnectTonWallet(){
   try { await tonConnectUI?.disconnect?.(); } catch(e){}
@@ -767,7 +897,7 @@ function walletCardHtml(){
   if (!walletAddress) {
     return `<div style="margin:14px 16px 0;background:linear-gradient(135deg,rgba(77,159,255,.12),rgba(124,92,255,.08));border:1px solid rgba(77,159,255,.25);border-radius:16px;padding:14px">
       <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:42px;height:42px;border-radius:12px;background:rgba(77,159,255,.12);display:flex;align-items:center;justify-content:center;font-size:22px"><i class="ton-icon-final"></i></div>
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(77,159,255,.12);display:flex;align-items:center;justify-content:center;font-size:22px"><i class="ton-icon-v15"></i></div>
         <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;color:#f0f0ff">TON-кошелёк не подключён</div><div style="font-size:11px;color:#7080a0;margin-top:2px">Подключи Tonkeeper / Wallet, чтобы увидеть баланс и подарки</div></div>
       </div>
       <button onclick="connectTonWallet()" style="margin-top:12px;width:100%;padding:12px;border-radius:13px;background:linear-gradient(135deg,#4d9fff,#7c5cff);color:#fff;font-size:13px;font-weight:800;box-shadow:0 6px 20px rgba(77,159,255,.25)">🔗 Подключить кошелёк</button>
@@ -787,7 +917,7 @@ function walletCardHtml(){
   </div>`;
 }
 function marketWalletButtonHtml(){
-  if (walletAddress) return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(34,212,122,.08);border:1px solid rgba(34,212,122,.22);border-radius:10px;padding:6px 11px;color:#22d47a;font-size:11px;font-weight:800"><i class="ton-icon-final"></i> ${fmtTon(walletBalance,3)} TON · ${esc(shortAddr(walletAddress))}</button>`;
+  if (walletAddress) return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(34,212,122,.08);border:1px solid rgba(34,212,122,.22);border-radius:10px;padding:6px 11px;color:#22d47a;font-size:11px;font-weight:800"><i class="ton-icon-v15"></i> ${fmtTon(walletBalance,3)} TON · ${esc(shortAddr(walletAddress))}</button>`;
   return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(124,92,255,.10);border:1px solid rgba(124,92,255,.28);border-radius:10px;padding:6px 11px;color:#a480ff;font-size:11px;font-weight:800">🔗 Подключить кошелёк</button>`;
 }
 
@@ -1046,119 +1176,45 @@ function renderMarket() {
   renderGrid();
 }
 
-
-function getHistoryPoints(slug, hours = 24) {
-    let pts = histories[slug] || [];
-    if (pts.length === 0 && prices[slug]) pts = [{time: Date.now()-1000, price: prices[slug].floor}];
-    if (hours < 999) {
-        const cutoff = Date.now() - hours * 3600000;
-        pts = pts.filter(p => p.time >= cutoff);
-    }
-    return pts;
-}
-
-function drawSpark(slug, id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const pts = getHistoryPoints(slug, 24);
-    if (pts.length < 1) return;
-    
-    const W = el.offsetWidth || 120, H = el.offsetHeight || 35;
-    const pArr = pts.map(p => p.price);
-    const min = Math.min(...pArr), max = Math.max(...pArr), range = (max - min) || 0.1;
-    
-    const color = (pts.length > 1 && pts[pts.length-1].price >= pts[0].price) ? '#22d47a' : '#ff4d6a';
-    const drawPts = pts.map((p, i) => `${(i * (W / (pts.length - 1 || 1))).toFixed(1)},${(H - ((p.price - min) / range) * (H * 0.8) - 2).toFixed(1)}`);
-    
-    el.innerHTML = `<svg width="100%" height="100%"><path d="M ${drawPts.join(' ')}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-}
-
-function renderFullChart(slug, hours = 24) {
-    const container = document.getElementById('full-terminal-chart');
-    if (!container) return;
-    const pts = getHistoryPoints(slug, hours);
-    const W = container.offsetWidth, H = container.offsetHeight;
-    const pArr = pts.map(p => p.price);
-    const min = Math.min(...pArr), max = Math.max(...pArr), range = (max - min) || 0.1;
-    const color = (pts.length > 1 && pts[pts.length-1].price >= pts[0].price) ? '#22d47a' : '#ff4d6a';
-    
-    const poly = pts.map((p, i) => `${(i * (W / (pts.length - 1 || 1))).toFixed(1)},${(H - ((p.price - min) / range) * (H * 0.7) - (H * 0.15)).toFixed(1)}`);
-    
-    container.innerHTML = `
-        <svg width="100%" height="100%" style="overflow:visible">
-            <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.2"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
-            <path d="M 0,${H} L ${poly.join(' ')} L ${W},${H} Z" fill="url(#g)"/>
-            <path d="M ${poly.join(' ')}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    `;
-}
-
-function openTerminal(slug) {
-    const g = GIFTS.find(x => x.slug === slug);
-    const p = prices[slug] || {floor:0, change24h:0};
-    let m = document.getElementById('tm-v14');
-    if(!m) { m = document.createElement('div'); m.id = 'tm-v14'; m.className = 'trade-modal-final'; document.body.appendChild(m); }
-    m.style.display = 'flex';
-    m.innerHTML = `
-        <div style="padding:20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1a1a2e;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <img src="https://fragment.com/file/gifts/${slug}/thumb.webp" style="width:40px; height:40px;">
-                <div><div style="font-size:16px; font-weight:900;">${g.name}</div><div style="font-size:11px; color:#22d47a;">LIVE TERMINAL</div></div>
-            </div>
-            <button onclick="document.getElementById('tm-v14').style.display='none'" style="color:#fff; font-size:22px;">✕</button>
-        </div>
-        <div style="padding:25px 20px 10px;">
-            <div style="font-size:11px; opacity:0.4;">PRICE NOW</div>
-            <div style="font-size:36px; font-weight:950;">${p.floor.toFixed(2)} <span style="font-size:14px; opacity:0.3;">TON</span></div>
-        </div>
-        <div id="full-terminal-chart" style="width:100%; height:260px; position:relative;"></div>
-        <div style="display:flex; gap:8px; padding:20px;">
-            ${[1, 6, 24, 168, 9999].map(h => `<button class="time-btn ${h===24?'on':''}" onclick="renderFullChart('${slug}', ${h}); this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('on')); this.classList.add('on');">${h>1000?'ALL':h+'H'}</button>`).join('')}
-        </div>
-        <div style="padding:20px; margin-top:auto; padding-bottom:40px;">
-            <button onclick="window.open('https://fragment.com/gifts/${slug}')" style="width:100%; padding:18px; border-radius:20px; background:#7c5cff; color:#fff; font-size:16px; font-weight:900; border:none;">BUY ON FRAGMENT</button>
-        </div>
-    `;
-    renderFullChart(slug, 24);
-}
-
-
 function renderGrid() {
-  const gr=document.getElementById('mgrid'); if(!gr)return;
+  const gr=document.getElementById('mgrid');if(!gr)return;
   let list=[...GIFTS];
-  if(mQuery) list=list.filter(g=>g.name.toLowerCase().includes(mQuery.toLowerCase()));
+  if(mQuery)list=list.filter(g=>g.name.toLowerCase().includes(mQuery.toLowerCase()));
   list.sort((a,b)=>{
-    const pa=prices[a.slug]||{}, pb=prices[b.slug]||{};
-    if(mSort==='vol24h') return (pb.vol24h||0)-(pa.vol24h||0);
-    if(mSort==='floor_desc') return (pb.floor||0)-(pa.floor||0);
-    return (pa.floor||0)-(pb.floor||0);
+    const pa=prices[a.slug]||{},pb=prices[b.slug]||{};
+    if(mSort==='vol24h')return(pb.vol24h||0)-(pa.vol24h||0);
+    if(mSort==='floor_desc')return(pb.floor||0)-(pa.floor||0);
+    if(mSort==='floor_asc')return(pa.floor||0)-(pb.floor||0);
+    if(mSort==='change_up')return(pb.change24h||0)-(pa.change24h||0);
+    if(mSort==='change_down')return(pa.change24h||0)-(pb.change24h||0);
+    return 0;
   });
-  
+  if(!list.length){gr.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px;color:#404060"><div style="font-size:36px;margin-bottom:10px">🔍</div><div>Ничего не найдено</div></div>`;return;}
   gr.innerHTML=list.map((g,i)=>{
-    const p=prices[g.slug]||{floor:0,change24h:0};
-    const up=p.change24h>=0;
-    return `
-    <div class="gcard" onclick="openTerminal('${g.slug}')" style="animation:fadeUp .3s ease ${i*0.02}s both">
-        <div style="width:100%; padding-top:100%; position:relative; background:rgba(0,0,0,0.2);">
-            <img src="${getCardImg(g)}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; padding:10px;">
-        </div>
-        <div style="padding:12px;">
-            <div style="font-size:12px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${g.name}</div>
-            <div class="price-box" style="margin-top:8px; background:rgba(255,255,255,0.03); border-radius:12px; padding:10px; border:1px solid rgba(255,255,255,0.05);">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-size:16px; font-weight:900;"><i class="ton-icon-final"></i>${p.floor.toFixed(2)}</div>
-                    <div style="font-size:10px; font-weight:800; color:${up?'#22d47a':'#ff4d6a'}">${up?'+':''}${p.change24h}%</div>
-                </div>
-                <div id="spk-${g.slug}" class="sparkline-box"></div>
-            </div>
-        </div>
-    </div>`;
+    const p=prices[g.slug]||{floor:0,change24h:0,vol24h:0};
+    const up=p.change24h>=0,usd=(p.floor*tonUsd).toFixed(0);
+    return `<div class="gcard" onclick="openDetail('${g.slug}')" style="animation:fadeUp .2s ease ${i*.025}s both">
+${g.isNew?`<div style="position:absolute;top:8px;left:8px;z-index:2;background:linear-gradient(135deg,#7c5cff,#4d9fff);border-radius:7px;padding:2px 8px;font-size:8px;font-weight:800;color:#fff">NEW</div>`:''}
+${p.sales24h>0?`<div style="position:absolute;top:8px;right:8px;z-index:2;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);border-radius:7px;padding:2px 7px;font-size:8px;color:#a0a0c0">${p.sales24h} сд/24ч</div>`:''}
+<div style="width:100%;padding-bottom:88%;position:relative;background:rgba(0,0,0,.2)">
+  <img src="${getCardImg(g)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:16px 16px 0 0;image-rendering:-webkit-optimize-contrast" loading="lazy" onerror="this.style.opacity=0;this.nextElementSibling.style.display='flex'"/>
+  <div style="display:none;position:absolute;inset:0;border-radius:16px 16px 0 0;background:rgba(80,60,140,.08);align-items:center;justify-content:center;font-size:24px;font-weight:900;color:rgba(124,92,255,.4)">${g.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+</div>
+<div style="padding:9px 10px 10px;flex:1;display:flex;flex-direction:column;gap:7px">
+  <div style="font-size:12px;font-weight:700;color:#e0e0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</div>
+  <div class="price-box" style="border-radius:9px;padding:6px 8px;background:rgba(0,0,0,.28)">
+    <div style="font-size:15px;font-weight:900;color:#f0f0ff;font-variant-numeric:tabular-nums" id="pv-${g.slug}" data-prev="${p.floor}" data-open="${p.floor}">${p.floor.toFixed(2)} <span style="font-size:9px;font-weight:500;color:#404060">TON</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px">
+      <div style="font-size:10px;font-weight:700;color:${up?'#22d47a':'#ff4d6a'}" id="pc-${g.slug}">${up?'▲':'▼'} ${Math.abs(p.change24h)}% 24ч</div>
+      <div style="font-size:9px;color:#404060" id="ps-${g.slug}">${usd}</div>
+    </div>
+  </div>
+  <div id="mc-${g.slug}" style="display:flex;justify-content:center">${miniChart(g.slug)}</div>
+</div></div>`;
   }).join('');
-  
-  // Отрисовка графиков после вставки HTML
-  setTimeout(() => { list.forEach(g => drawSpark(g.slug, "spk-"+g.slug)); }, 50);
 }
 
+// ═══ DETAIL PAGE ═══
 function renderDetail(slug) {
   const g=GIFTS.find(x=>x.slug===slug);if(!g)return;
   const p=prices[slug]||{floor:0,change24h:0,vol24h:0};
@@ -1217,7 +1273,7 @@ function dtab(t){
 }
 
 function dtInfo(g,p){
-  const rows=[['💰 Floor',`<strong style="color:#f0b429">${(p.floor||0).toFixed(2)} TON</strong> · $${((p.floor||0)*tonUsd).toFixed(0)}`],['📈 24ч',`<span style="color:${(p.change24h||0)>=0?'#22d47a':'#ff4d6a'}">${(p.change24h||0)>=0?'+':''}${p.change24h||0}%</span>`],['📊 Объём',`${(p.vol24h||0).toFixed(0)} TON`],['🛒 Сделок',`${p.sales24h||0}`],['📋 Листинги',`${p.listed||0}`],['🏭 Supply',`${(p.supply||0).toLocaleString()}`],['<i class="ton-icon-final"></i> Market Cap',`${((p.marketCap||0)/1000).toFixed(1)}K TON`],['🕒 Обновлено',p.updated?new Date(p.updated).toLocaleTimeString('ru'):'—']];
+  const rows=[['💰 Floor',`<strong style="color:#f0b429">${(p.floor||0).toFixed(2)} TON</strong> · $${((p.floor||0)*tonUsd).toFixed(0)}`],['📈 24ч',`<span style="color:${(p.change24h||0)>=0?'#22d47a':'#ff4d6a'}">${(p.change24h||0)>=0?'+':''}${p.change24h||0}%</span>`],['📊 Объём',`${(p.vol24h||0).toFixed(0)} TON`],['🛒 Сделок',`${p.sales24h||0}`],['📋 Листинги',`${p.listed||0}`],['🏭 Supply',`${(p.supply||0).toLocaleString()}`],['<i class="ton-icon-v15"></i> Market Cap',`${((p.marketCap||0)/1000).toFixed(1)}K TON`],['🕒 Обновлено',p.updated?new Date(p.updated).toLocaleTimeString('ru'):'—']];
   return `<div style="animation:fadeIn .2s ease">${rows.map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0">${v}</span></div>`).join('')}
 <div style="margin-top:14px;display:flex;gap:9px">
 <a href="https://fragment.com/gifts/${g.slug}" target="_blank" style="flex:1;padding:10px;border-radius:12px;background:rgba(124,92,255,.12);border:1px solid rgba(124,92,255,.3);color:#a480ff;font-size:11px;font-weight:700;text-align:center">🔗 Fragment</a>
@@ -1616,7 +1672,7 @@ function renderNews(){
   if(topSales && topSales.slug!==topVol?.slug){
     const p=prices[topSales.slug]||{};
     news.push({
-      e:'<i class="ton-icon-final"></i>',
+      e:'<i class="ton-icon-v15"></i>',
       t:`${topSales.name} — больше всего продаж`,
       b:`${p.sales24h||0} сделок за 24ч · Floor: ${(p.floor||0).toFixed(2)} TON · Объём: ${(p.vol24h||0).toFixed(0)} TON`,
       gid:topSales.slug, tp:'hot', time:Date.now()-(Math.random()*7200000), tags:['#продажи']
@@ -1712,7 +1768,7 @@ ${u.id?`<div style="font-size:22px;font-weight:900;color:#f0f0ff;white-space:now
 </div>
 </div></div>
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-${[['<i class="ton-icon-final"></i>',fmtTon(walletBalance,3)+' TON','#f0b429','Баланс'],['🎁',inv.length,'#22d47a','Подарки'],['📊',GIFTS.length,'#7c5cff','На рынке']].map(([ic,v,c,l])=>`<div style="background:rgba(255,255,255,.06);border-radius:14px;padding:12px 8px;text-align:center;border:1px solid rgba(255,255,255,.07)"><div style="font-size:18px;margin-bottom:4px">${ic}</div><div style="font-size:13px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:#505070;margin-top:2px">${l}</div></div>`).join('')}
+${[['<i class="ton-icon-v15"></i>',fmtTon(walletBalance,3)+' TON','#f0b429','Баланс'],['🎁',inv.length,'#22d47a','Подарки'],['📊',GIFTS.length,'#7c5cff','На рынке']].map(([ic,v,c,l])=>`<div style="background:rgba(255,255,255,.06);border-radius:14px;padding:12px 8px;text-align:center;border:1px solid rgba(255,255,255,.07)"><div style="font-size:18px;margin-bottom:4px">${ic}</div><div style="font-size:13px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:#505070;margin-top:2px">${l}</div></div>`).join('')}
 </div></div></div>
 ${walletCardHtml()}
 
@@ -1780,7 +1836,7 @@ ${[['🔗 Источник цен','Portal Market'],['⏱ Обновление',
 </div>
 <div style="background:rgba(255,255,255,.03);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.06)">
 <div style="font-size:10px;color:#505070;font-weight:700;margin-bottom:12px;letter-spacing:.5px">КОШЕЛЁК</div>
-${[['<i class="ton-icon-final"></i> Адрес',walletAddress?shortAddr(walletAddress):'не подключён'],['💰 Баланс',fmtTon(walletBalance,4)+' TON'],['🎁 Telegram Gifts',String(walletGifts.length)],['🕒 Обновлено',walletLastUpdate?new Date(walletLastUpdate).toLocaleTimeString('ru'):'—']].map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:12px"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0;text-align:right">${esc(v)}</span></div>`).join('')}
+${[['<i class="ton-icon-v15"></i> Адрес',walletAddress?shortAddr(walletAddress):'не подключён'],['💰 Баланс',fmtTon(walletBalance,4)+' TON'],['🎁 Telegram Gifts',String(walletGifts.length)],['🕒 Обновлено',walletLastUpdate?new Date(walletLastUpdate).toLocaleTimeString('ru'):'—']].map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:12px"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0;text-align:right">${esc(v)}</span></div>`).join('')}
 </div>
 <a href="https://fragment.com/gifts" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#808090;font-size:13px;font-weight:700">🔗 Fragment.com</a>
 </div>`;
@@ -2044,6 +2100,6 @@ init();
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ff3df928ac7eecd',t:'MTc3OTM2OTU3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a006c6ee7bba23b0',t:'MTc3OTU2Nzc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a01384a1a8030282',t:'MTc3OTcwMTM5MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0138de9de9f026e',t:'MTc3OTcwMTc3MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
