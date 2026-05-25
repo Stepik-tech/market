@@ -44,7 +44,7 @@ html, body { font-size: var(--fs-base); }
 /* Fluid back btn */
 .back { width:clamp(34px,9vw,42px); height:clamp(34px,9vw,42px); font-size:clamp(17px,5vw,22px); }
 
-/* --- Arena v9: Cursor Market Final Fix --- */
+/* --- Arena v11: Cursor Market Premium UI --- */
 :root {
   --app-w: min(100vw, 450px);
   --glass: rgba(255, 255, 255, 0.05);
@@ -57,6 +57,8 @@ body {
   display: flex !important;
   justify-content: center !important;
   margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
 }
 
 .app {
@@ -79,46 +81,46 @@ body {
   border-radius: 28px !important;
 }
 
-/* Perfect Banner */
+/* Banner Typography Fix */
 .banner-container {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    gap: 0; /* Убираем зазор для идеального snap */
-    padding: 15px 0 25px; /* Убираем боковые падинги контейнера для ширины 100% */
-    scrollbar-width: none;
-    scroll-behavior: smooth;
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 0;
+    padding: 15px 0 25px; scrollbar-width: none; scroll-behavior: smooth;
 }
 .banner-container::-webkit-scrollbar { display: none; }
 
 .banner-card {
-    flex: 0 0 calc(100% - 32px); /* Ширина приложения минус отступы */
-    margin: 0 16px; /* Создаем аккуратные поля */
-    scroll-snap-align: center;
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(35px);
-    -webkit-backdrop-filter: blur(35px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 30px;
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    box-shadow: 0 15px 45px rgba(0,0,0,0.4);
-    box-sizing: border-box;
+    flex: 0 0 calc(100% - 32px); margin: 0 16px; scroll-snap-align: center;
+    background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(35px);
+    -webkit-backdrop-filter: blur(35px); border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 26px; padding: 16px; display: flex; align-items: center; gap: 15px;
+    box-sizing: border-box; height: 110px; box-shadow: 0 12px 35px rgba(0,0,0,0.4);
 }
 
-.banner-img { width: 75px; height: 75px; border-radius: 20px; object-fit: contain; background: rgba(0,0,0,0.3); }
-.banner-title { font-size: 16px; font-weight: 900; color: #fff; line-height: 1.2; letter-spacing: -0.3px; }
+.banner-img { width: 65px; height: 65px; border-radius: 16px; object-fit: contain; background: rgba(0,0,0,0.2); flex-shrink: 0; }
+.banner-content { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.banner-tag { font-size: 8px; font-weight: 800; padding: 3px 7px; border-radius: 6px; text-transform: uppercase; margin-bottom: 5px; display: inline-block; width: fit-content; }
+.banner-title { 
+    font-size: 15px; font-weight: 700; color: #fff; line-height: 1.25; letter-spacing: -0.2px;
+    display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; 
+    overflow: hidden; text-overflow: ellipsis; 
+}
+.banner-verify-text { font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 
 /* Custom TON Icon */
 .ton-icon-img {
-    width: 18px;
-    height: 18px;
-    display: inline-block;
-    vertical-align: middle;
-    margin-right: 4px;
+    width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 4px;
     background: url('https://ton.org/download/ton_symbol.svg') center/contain no-repeat;
+}
+
+.market-mesh-bg {
+  background: linear-gradient(-45deg, #0d0820, #1a0b3a, #080810, #141425);
+  background-size: 400% 400%;
+  animation: meshGradient 15s ease infinite;
+}
+@keyframes meshGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 </style>
@@ -385,14 +387,14 @@ function getLatestNews() {
     const giftsCopy = [...GIFTS];
     const topUp = giftsCopy.sort((a,b)=>(prices[b.slug]?.change24h||0)-(prices[a.slug]?.change24h||0))[0];
     if(topUp && (prices[topUp.slug]?.change24h||0) > 5) {
-        news.push({ id: 'up_' + topUp.slug, slug: topUp.slug, tag: 'РОСТ ЦЕНЫ', color: '#22d47a', source:'Portal', title: `${topUp.name} +${prices[topUp.slug].change24h}%!`, short: `Спрос на Fragment растет.`, detail: `Мы зафиксировали рост цены ${topUp.name}. История в нашей базе подтверждает тренд.`, action: 'График' });
+        news.push({ id: 'up_' + topUp.slug, slug: topUp.slug, tag: 'РОСТ ЦЕНЫ', color: '#22d47a', source:'Portal Market', title: `${topUp.name} +${prices[topUp.slug].change24h}%!`, short: `Спрос на Fragment растет.`, detail: `Мы зафиксировали рост цены ${topUp.name}. Наши алгоритмы подтвердили совпадение с данными Fragment. Повышенный спрос создает дефицит листингов.`, action: 'К аналитике' });
     }
     const topDown = [...GIFTS].sort((a,b)=>(prices[a.slug]?.change24h||0)-(prices[b.slug]?.change24h||0))[0];
     if(topDown && (prices[topDown.slug]?.change24h||0) < -5) {
-        news.push({ id: 'down_' + topDown.slug, slug: topDown.slug, tag: 'ДИСКОНТ', color: '#ff4d6a', source:'Whale', title: `${topDown.name} -${Math.abs(prices[topDown.slug].change24h)}%`, short: `Похоже на удачный момент для входа.`, detail: `Цена скорректировалась. Наши скрипты подтвердили падение через официальные источники.`, action: 'Купить' });
+        news.push({ id: 'down_' + topDown.slug, slug: topDown.slug, tag: 'ДИСКОНТ', color: '#ff4d6a', source:'Whale Monitor', title: `${topDown.name} -${Math.abs(prices[topDown.slug].change24h)}%`, short: `Верифицировано по истории цен.`, detail: `Цена скорректировалась. Наши скрипты подтвердили падение через официальные источники. Это может быть удачным моментом для покупки.`, action: 'Искать дно' });
     }
     if(news.length < 2) {
-        news.push({ id: 'stable', slug: 'snoopdogg', tag: 'MARKET', color: '#7c5cff', source:'System', title: 'Курсор Маркет: Мониторинг', short: 'Скрипты сканируют 114 коллекций.', detail: 'Все системы работают в штатном режиме. Мы следим за ценами 24/7.', action: 'Обновить' });
+        news.push({ id: 'stable', slug: 'snoopdogg', tag: 'MARKET', color: '#7c5cff', source:'System', title: 'Cursor Market: Мониторинг', short: 'Скрипты сканируют 114 коллекций.', detail: 'Все системы работают в штатном режиме. Мы анализируем Portal Market каждые 20 секунд. Аномальных движений не обнаружено.', action: 'Обновить' });
     }
     return news;
 }
@@ -1081,50 +1083,50 @@ function closeDetail(){document.getElementById('pg-detail').style.display='none'
 // ═══ MARKET PAGE ═══
 
 function renderMarket() {
-  const pg = document.getElementById('pg-market');
-  const signals = getLatestNews();
-  pg.innerHTML = `
-    <div class="market-mesh-bg">
-        <div style="padding: 24px 20px 10px; display:flex; justify-content:space-between; align-items:center;">
-           <div>
-              <h1 style="font-size:26px; font-weight:950; margin:0; letter-spacing:-1px;">Cursor Market</h1>
-              <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
-                <div style="width:7px; height:7px; background:#22d47a; border-radius:50%; box-shadow:0 0 8px #22d47a; animation: pulse 2s infinite;"></div>
-                <span style="font-size:11px; color:#22d47a; font-weight:800;">LIVE</span>
-              </div>
-           </div>
-           <div style="text-align:right;">
-              <div style="font-size:18px; font-weight:900; color:#f0b429;"><i class="ton-icon-img"></i>$${tonUsd.toFixed(2)}</div>
-           </div>
-        </div>
-        <div class="banner-container">
-            ${signals.map(s => `
-                <div class="banner-card" onclick="go('news'); setTimeout(() => { document.getElementById('sig_${s.id}')?.scrollIntoView({behavior:'smooth', block:'center'}); }, 150)">
-                    <img src="https://fragment.com/file/gifts/${s.slug}/thumb.webp" class="banner-img">
-                    <div class="banner-content">
-                        <span class="banner-tag" style="background:${s.color}20; color:${s.color}; border:1px solid ${s.color}40">${s.tag}</span>
-                        <div class="banner-title">${s.title}</div>
-                        <div style="font-size:10px; color:rgba(255,255,255,0.4); margin-top:4px; font-weight:700;">Verified by ${s.source}</div>
+    const pg = document.getElementById('pg-market');
+    const signals = getLatestNews();
+    pg.innerHTML = `
+        <div class="market-mesh-bg">
+            <div style="padding: 24px 20px 10px; display:flex; justify-content:space-between; align-items:center;">
+               <div>
+                  <h1 style="font-size:26px; font-weight:950; margin:0; letter-spacing:-1px;">Cursor Market</h1>
+                  <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+                    <div style="width:7px; height:7px; background:#22d47a; border-radius:50%; box-shadow:0 0 8px #22d47a; animation: pulse 2s infinite;"></div>
+                    <span style="font-size:11px; color:#22d47a; font-weight:800;">LIVE</span>
+                  </div>
+               </div>
+               <div style="text-align:right;">
+                  <div style="font-size:18px; font-weight:900; color:#f0b429;"><i class="ton-icon-img"></i>$${tonUsd.toFixed(2)}</div>
+               </div>
+            </div>
+            <div class="banner-container">
+                ${signals.map(s => `
+                    <div class="banner-card" onclick="go('news'); setTimeout(() => { document.getElementById('sig_${s.id}')?.scrollIntoView({behavior:'smooth', block:'center'}); }, 150)">
+                        <img src="https://fragment.com/file/gifts/${s.slug}/thumb.webp" class="banner-img">
+                        <div class="banner-content">
+                            <span class="banner-tag" style="background:${s.color}20; color:${s.color}; border:1px solid ${s.color}40">${s.tag}</span>
+                            <div class="banner-title">${s.title}</div>
+                            <div class="banner-verify-text">Checked by ${s.source}</div>
+                        </div>
                     </div>
-                </div>
+                `).join('')}
+            </div>
+        </div>
+        <div style="padding:15px 16px 0">
+          <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:10px 14px">
+            <span style="font-size:14px;opacity:.4">🔍</span>
+            <input id="si" placeholder="Поиск коллекции..." value="${mQuery}" oninput="mQuery=this.value;renderGrid()" style="flex:1;color:#f0f0ff;font-size:14px;border:none;background:none;outline:none;"/>
+          </div>
+        </div>
+        <div style="padding:12px 16px 0; overflow-x:auto; display:flex; gap:6px; scrollbar-width:none;">
+            ${[['vol24h','📊 Объём'],['floor_desc','↓ Цена'],['floor_asc','↑ Цена'],['change_up','🔥 Рост']].map(([s,l])=>`
+                <button class="spill ${s===mSort?'on':'off'}" style="flex:0 0 auto;" onclick="mSort='${s}'; renderMarket()">${l}</button>
             `).join('')}
         </div>
-    </div>
-    <div style="padding:15px 16px 0">
-      <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:10px 14px">
-        <span style="font-size:14px;opacity:.4">🔍</span>
-        <input id="si" placeholder="Поиск коллекции..." value="${mQuery}" oninput="mQuery=this.value;renderGrid()" style="flex:1;color:#f0f0ff;font-size:14px;border:none;background:none;outline:none;"/>
-      </div>
-    </div>
-    <div style="padding:12px 16px 0; overflow-x:auto; display:flex; gap:6px; scrollbar-width:none;">
-        ${[['vol24h','📊 Объём'],['floor_desc','↓ Цена'],['floor_asc','↑ Цена'],['change_up','🔥 Рост']].map(([s,l])=>`
-            <button class="spill ${s===mSort?'on':'off'}" style="flex:0 0 auto;" onclick="mSort='${s}'; renderMarket()">${l}</button>
-        `).join('')}
-    </div>
-    <div id="mgrid" style="margin-top:15px; display:grid; grid-template-columns: 1fr 1fr; gap:10px; padding: 0 16px 120px;"></div>
-  `;
-  renderGrid();
-  initBannerAutoScroll();
+        <div id="mgrid" style="margin-top:15px; display:grid; grid-template-columns: 1fr 1fr; gap:10px; padding: 0 16px 120px;"></div>
+    `;
+    renderGrid();
+    initBannerAutoScroll();
 }
 
 
@@ -1572,11 +1574,11 @@ function resetWheelCrt(){
 
 function renderNews() {
     const pg = document.getElementById('pg-news');
-    const signals = getLatestNews();
+    const news = getLatestNews();
     pg.innerHTML = `
         <div style="padding: 24px 20px;"><h1 style="font-size:28px; font-weight:950; margin:0;">Сигналы Рынка</h1><p style="font-size:14px; color:rgba(255,255,255,0.5); margin-top:5px;">Cursor Market: Подробности</p></div>
         <div style="padding: 0 16px 100px;">
-            ${signals.map(s => `
+            ${news.map(s => `
                 <div id="sig_${s.id}" class="glass-card" style="margin-bottom: 20px; padding: 24px;">
                     <div style="display:flex; align-items:center; gap:15px; margin-bottom:15px;">
                         <img src="https://fragment.com/file/gifts/${s.slug}/thumb.webp" style="width:60px; height:60px; object-fit:contain;">
@@ -1609,9 +1611,9 @@ function renderProfile(){
         <div style="color:#7c5cff; font-weight:600; font-size:14px; margin-top:4px;">${esc(u.displayUsername || u.username || 'Без username')}</div>
     </div>
     <div class="glass-card" style="margin: 0 16px 20px; display:flex; justify-content:space-around; padding:22px;">
-        <div style="text-align:center;"><div style="font-size:22px; font-weight:900;">${inv.length}</div><div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700;">GIFTS</div></div>
-        <div style="text-align:center;"><div style="font-size:22px; font-weight:900; color:#f0b429;"><i class="ton-icon-img"></i>${walletBalance.toFixed(2)}</div><div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700;">TON</div></div>
-        <div style="text-align:center;"><div style="font-size:22px; font-weight:900; color:#4d9fff;">${onlineCount}</div><div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700;">ONLINE</div></div>
+        <div style="text-align:center;"><div style="font-size:22px; font-weight:900;">${inv.length}</div><div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700; margin-top:4px;">GIFTS</div></div>
+        <div style="text-align:center;"><div style="font-size:22px; font-weight:900; color:#f0b429;"><i class="ton-icon-img"></i>${walletBalance.toFixed(2)}</div><div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700; margin-top:4px;">TON</div></div>
+        <div style="text-align:center;"><div style="font-size:22px; font-weight:900; color:#4d9fff;">${onlineCount}</div><div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700; margin-top:4px;">ONLINE</div></div>
     </div>
     ${walletCardHtml()}
     <div style="padding: 20px 16px 120px;"><div style="font-size:13px; font-weight:800; color:rgba(255,255,255,0.5); margin-bottom:15px; letter-spacing:1px;">MY INVENTORY</div><div id="ptcontent">${pInv(inv)}</div></div>
@@ -1936,6 +1938,6 @@ function startSplashWhenReady() {
 
 init();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0134fb66ab80282',t:'MTc3OTY5OTIyNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-</body>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a01358cd38050282',t:'MTc3OTY5OTU5Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
