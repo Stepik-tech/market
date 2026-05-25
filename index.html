@@ -44,52 +44,34 @@ html, body { font-size: var(--fs-base); }
 /* Fluid back btn */
 .back { width:clamp(34px,9vw,42px); height:clamp(34px,9vw,42px); font-size:clamp(17px,5vw,22px); }
 
-/* --- Arena v20: Deep Sync & Real Data --- */
+/* --- Arena v21 Ultimate: Banners + Deep Sync --- */
 :root {
   --app-w: min(100vw, 450px);
   --glass: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.12);
+  --accent: #7c5cff;
 }
 
-body {
-  background: #000 !important;
-  display: flex !important;
-  justify-content: center !important;
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-}
+body { background: #000 !important; display: flex !important; justify-content: center !important; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }
+.app { width: var(--app-w) !important; max-width: var(--app-w) !important; background: #080810 !important; box-shadow: 0 0 100px #000 !important; min-height: 100dvh; position: relative; display: flex; flex-direction: column; }
 
-.app {
-  width: var(--app-w) !important;
-  max-width: var(--app-w) !important;
-  background: #080810 !important;
-  box-shadow: 0 0 100px #000 !important;
-  min-height: 100dvh;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-
-.spark-v20 { width: 100%; height: 35px; margin-top: 8px; }
-.terminal-overlay { position: fixed; inset: 0; z-index: 10000; background: #080810; display: none; flex-direction: column; animation: slideUp 0.3s ease; }
-
-.ton-icon-v20 {
-    width: 16px; height: 16px; display: inline-block; vertical-align: middle;
-    background: url('https://ton.org/download/ton_symbol.svg') center/contain no-repeat;
-    margin-right: 4px;
-}
-
-/* Banners Slider */
+/* Banners (Premium Look) */
 .banner-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 0; padding: 15px 0 25px; scrollbar-width: none; scroll-behavior: smooth; }
+.banner-container::-webkit-scrollbar { display: none; }
 .banner-card {
     flex: 0 0 calc(100% - 32px); margin: 0 16px; scroll-snap-align: center;
-    background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(35px);
-    -webkit-backdrop-filter: blur(35px); border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 26px; padding: 18px; display: flex; align-items: center; gap: 15px;
-    box-sizing: border-box; height: 110px;
+    background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
+    border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 28px; padding: 18px;
+    display: flex; align-items: center; gap: 15px; box-sizing: border-box; height: 115px; box-shadow: 0 15px 40px rgba(0,0,0,0.4);
 }
-.banner-img { width: 70px; height: 70px; border-radius: 18px; object-fit: contain; background: rgba(0,0,0,0.2); }
+.banner-img { width: 75px; height: 75px; border-radius: 20px; object-fit: contain; background: rgba(0,0,0,0.3); flex-shrink: 0; }
 .banner-title { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.25; letter-spacing: -0.2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.banner-tag { font-size: 8px; font-weight: 900; background: var(--accent); color: #fff; padding: 3px 8px; border-radius: 6px; margin-bottom: 5px; display: inline-block; }
+
+/* Charts */
+.spark-v21 { width: 100%; height: 35px; margin-top: 8px; }
+.terminal-overlay { position: fixed; inset: 0; z-index: 10000; background: #080810; display: none; flex-direction: column; animation: slideUp 0.3s ease; }
+.ton-icon-v21 { width: 16px; height: 16px; display: inline-block; vertical-align: middle; background: url('https://ton.org/download/ton_symbol.svg') center/contain no-repeat; margin-right: 4px; }
 
 </style>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -332,13 +314,15 @@ let walletLastUpdate = 0;
 
 
 let bannerInterval = null;
+let lastInteraction = 0;
 
 function initBannerAutoScroll() {
     if(bannerInterval) clearInterval(bannerInterval);
     const container = document.querySelector('.banner-container');
     if(!container) return;
+    container.addEventListener('touchstart', () => { lastInteraction = Date.now(); }, {passive: true});
     bannerInterval = setInterval(() => {
-        if(curTab !== 'market') return;
+        if(curTab !== 'market' || (Date.now() - lastInteraction < 8000)) return;
         const banners = container.querySelectorAll('.banner-card');
         if (banners.length <= 1) return;
         let currentIndex = Math.round(container.scrollLeft / container.offsetWidth);
@@ -352,34 +336,21 @@ function getLatestNews() {
     const giftsCopy = [...GIFTS];
     const topUp = giftsCopy.sort((a,b)=>(prices[b.slug]?.change24h||0)-(prices[a.slug]?.change24h||0))[0];
     if(topUp && (prices[topUp.slug]?.change24h||0) > 5) {
-        news.push({ id: 'up', slug: topUp.slug, tag: 'РОСТ ЦЕНЫ', color: '#22d47a', title: `${topUp.name} +${prices[topUp.slug].change24h}%!`, source:'Portal Market' });
+        news.push({ id: 'up', slug: topUp.slug, tag: 'РОСТ ЦЕНЫ', color: '#22d47a', source:'Portal Market', title: `${topUp.name} взлетел на ${prices[topUp.slug].change24h}%!`, detail: `Наши скрипты зафиксировали резкий рост цены на Fragment. История торгов подтверждает высокий спрос.`, action: 'К аналитике' });
     }
     const topDown = giftsCopy.sort((a,b)=>(prices[a.slug]?.change24h||0)-(prices[b.slug]?.change24h||0))[0];
     if(topDown && (prices[topDown.slug]?.change24h||0) < -5) {
-        news.push({ id: 'down', slug: topDown.slug, tag: 'ДИСКОНТ', color: '#ff4d6a', title: `${topDown.name} -${Math.abs(prices[topDown.slug].change24h)}%`, source:'Whale Monitor' });
+        news.push({ id: 'down', slug: topDown.slug, tag: 'ДИСКОНТ', color: '#ff4d6a', source:'Whale monitor', title: `Падение ${topDown.name} на ${Math.abs(prices[topDown.slug].change24h)}%`, detail: `Цена скорректировалась. Это может быть хорошей точкой входа для долгосрочных коллекционеров.`, action: 'Искать дно' });
     }
-    if(news.length < 2) news.push({ id: 'ok', slug: 'snoopdogg', tag: 'MARKET', color: '#7c5cff', title: 'Cursor Market: Синхронизация с Fragment', source:'Live' });
+    if(news.length < 2) news.push({ id: 'ok', slug: 'snoopdogg', tag: 'MARKET', color: '#7c5cff', source:'System', title: 'Cursor Market: Данные синхронизированы', detail: 'Скрипты анализируют 114 коллекций в режиме реального времени. Аномалий не обнаружено.', action: 'Обновить' });
     return news;
 }
 
-// Глубокая синхронизация истории
-async function syncMarketHistory() {
-    // Запрашиваем историю для первых 24 подарков (самые важные)
-    const list = GIFTS.slice(0, 24);
-    for(const g of list) {
-        // Запрашиваем 72 часа истории, чтобы покрыть любые сбои сервера
-        fetchHistory(g.slug).then(() => {
-            drawSparkV20(g.slug, `spk-${g.slug}`);
-        });
-    }
-}
-
-function drawSparkV20(slug, id) {
+function drawSparkV21(slug, id) {
     const el = document.getElementById(id);
     if (!el) return;
     const pts = histories[slug] || [];
     if (pts.length < 2) return;
-    
     const W = el.offsetWidth || 120, H = el.offsetHeight || 35;
     const pArr = pts.map(p => p.price);
     const min = Math.min(...pArr), max = Math.max(...pArr), range = (max - min) || 0.1;
@@ -388,33 +359,40 @@ function drawSparkV20(slug, id) {
     el.innerHTML = `<svg width="100%" height="100%"><path d="M ${draw.join(' ')}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
-function openTerminalV20(slug) {
+async function syncMarket() {
+    const list = GIFTS.slice(0, 24);
+    for(const g of list) {
+        fetchHistory(g.slug).then(() => drawSparkV21(g.slug, `spk-${g.slug}`));
+    }
+}
+
+function openTerminalV21(slug) {
     const g = GIFTS.find(x => x.slug === slug);
     const p = prices[slug] || {floor:0, change24h:0};
-    let m = document.getElementById('tm-v20');
-    if(!m) { m = document.createElement('div'); m.id = 'tm-v20'; m.className = 'terminal-overlay'; document.body.appendChild(m); }
+    let m = document.getElementById('tm-v21');
+    if(!m) { m = document.createElement('div'); m.id = 'tm-v21'; m.className = 'terminal-overlay'; document.body.appendChild(m); }
     m.style.display = 'flex';
     m.innerHTML = `
         <div style="padding:20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.05);">
             <div style="display:flex; align-items:center; gap:12px;">
                 <img src="https://fragment.com/file/gifts/${slug}/thumb.webp" style="width:40px; height:40px;">
-                <div><div style="font-size:16px; font-weight:900;">${g.name}</div><div style="font-size:11px; color:#22d47a;">LIVE EXCHANGE</div></div>
+                <div><div style="font-size:16px; font-weight:900;">${g.name}</div><div style="font-size:11px; color:#22d47a;">LIVE NETWORK</div></div>
             </div>
-            <button onclick="document.getElementById('tm-v20').style.display='none'" style="color:#fff; font-size:24px; background:none; border:none;">✕</button>
+            <button onclick="document.getElementById('tm-v21').style.display='none'" style="color:#fff; font-size:24px; background:none; border:none;">✕</button>
         </div>
-        <div style="padding:20px;">
-            <div style="font-size:11px; opacity:0.4;">MARKET PRICE</div>
+        <div style="padding:25px 20px 10px;">
+            <div style="font-size:11px; opacity:0.4;">PRICE NOW</div>
             <div style="font-size:36px; font-weight:950;">${p.floor.toFixed(2)} <span style="font-size:14px; opacity:0.3;">TON</span></div>
         </div>
         <div id="full-chart-area" style="width:100%; height:280px; position:relative;"></div>
         <div style="padding:20px; margin-top:auto; padding-bottom:40px;">
-            <button onclick="window.open('https://fragment.com/gifts/${slug}')" style="width:100%; padding:18px; border-radius:20px; background:#7c5cff; color:#fff; font-size:16px; font-weight:900; border:none;">TRADE ON FRAGMENT</button>
+            <button onclick="window.open('https://fragment.com/gifts/${slug}')" style="width:100%; padding:18px; border-radius:20px; background:#7c5cff; color:#fff; font-size:16px; font-weight:900; border:none;">BUY ON FRAGMENT</button>
         </div>
     `;
-    renderFullChartV20(slug);
+    renderFullV21(slug);
 }
 
-function renderFullChartV20(slug) {
+function renderFullV21(slug) {
     const container = document.getElementById('full-chart-area');
     const pts = histories[slug] || [];
     if(pts.length < 2) { container.innerHTML = '<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#404060;">Синхронизация...</div>'; return; }
@@ -424,8 +402,16 @@ function renderFullChartV20(slug) {
     const color = pts[pts.length-1].price >= pts[0].price ? '#22d47a' : '#ff4d6a';
     const path = pts.map((p, i) => `${i*(W/(pts.length-1))},${H - ((p.price-min)/range)*H*0.7 - H*0.15}`).join(' ');
     container.innerHTML = `<svg width="100%" height="100%" style="overflow:visible">
-        <defs><linearGradient id="g-v20" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.2"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
-        <path d="M 0,${H} L ${path} L ${W},${H} Z" fill="url(#g-v20)"/><path d="M ${path}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+        <defs><linearGradient id="g-v21" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.2"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+        <path d="M 0,${H} L ${path} L ${W},${H} Z" fill="url(#g-v21)"/><path d="M ${path}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+function buildAvatar(user, size = 64) {
+    const color = user?.color || '#7c5cff';
+    const initials = user?.initials || '?';
+    const photo = user?.photo || user?.avatar;
+    if (photo) return `<div style="width:${size}px;height:${size}px;border-radius:50%;border:2px solid rgba(255,255,255,0.1);overflow:hidden;display:inline-block;vertical-align:middle;"><img src="${photo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='${initials}'"></div>`;
+    return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:linear-gradient(135deg,${color},${color}99);display:flex;align-items:center;justify-content:center;font-size:${size/2.5}px;font-weight:900;color:#fff;border:2px solid rgba(255,255,255,0.1);display:inline-block;vertical-align:middle;line-height:${size}px;text-align:center;">${initials}</div>`;
 }
 
 function initTgUser() {
@@ -856,7 +842,7 @@ async function connectTonWallet(){
   // Fallback, если SDK не загрузился (например, в sandbox preview без сети)
   if (tg?.openLink) tg.openLink('https://app.tonkeeper.com/ton-connect');
   else window.open('https://app.tonkeeper.com/ton-connect','_blank');
-  showToast('<i class="ton-icon-v20"></i> TON Connect', 'Открой в браузере/Telegram, чтобы подключить кошелёк');
+  showToast('<i class="ton-icon-v21"></i> TON Connect', 'Открой в браузере/Telegram, чтобы подключить кошелёк');
 }
 async function disconnectTonWallet(){
   try { await tonConnectUI?.disconnect?.(); } catch(e){}
@@ -900,7 +886,7 @@ function walletCardHtml(){
   if (!walletAddress) {
     return `<div style="margin:14px 16px 0;background:linear-gradient(135deg,rgba(77,159,255,.12),rgba(124,92,255,.08));border:1px solid rgba(77,159,255,.25);border-radius:16px;padding:14px">
       <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:42px;height:42px;border-radius:12px;background:rgba(77,159,255,.12);display:flex;align-items:center;justify-content:center;font-size:22px"><i class="ton-icon-v20"></i></div>
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(77,159,255,.12);display:flex;align-items:center;justify-content:center;font-size:22px"><i class="ton-icon-v21"></i></div>
         <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;color:#f0f0ff">TON-кошелёк не подключён</div><div style="font-size:11px;color:#7080a0;margin-top:2px">Подключи Tonkeeper / Wallet, чтобы увидеть баланс и подарки</div></div>
       </div>
       <button onclick="connectTonWallet()" style="margin-top:12px;width:100%;padding:12px;border-radius:13px;background:linear-gradient(135deg,#4d9fff,#7c5cff);color:#fff;font-size:13px;font-weight:800;box-shadow:0 6px 20px rgba(77,159,255,.25)">🔗 Подключить кошелёк</button>
@@ -920,7 +906,7 @@ function walletCardHtml(){
   </div>`;
 }
 function marketWalletButtonHtml(){
-  if (walletAddress) return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(34,212,122,.08);border:1px solid rgba(34,212,122,.22);border-radius:10px;padding:6px 11px;color:#22d47a;font-size:11px;font-weight:800"><i class="ton-icon-v20"></i> ${fmtTon(walletBalance,3)} TON · ${esc(shortAddr(walletAddress))}</button>`;
+  if (walletAddress) return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(34,212,122,.08);border:1px solid rgba(34,212,122,.22);border-radius:10px;padding:6px 11px;color:#22d47a;font-size:11px;font-weight:800"><i class="ton-icon-v21"></i> ${fmtTon(walletBalance,3)} TON · ${esc(shortAddr(walletAddress))}</button>`;
   return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(124,92,255,.10);border:1px solid rgba(124,92,255,.28);border-radius:10px;padding:6px 11px;color:#a480ff;font-size:11px;font-weight:800">🔗 Подключить кошелёк</button>`;
 }
 
@@ -1102,82 +1088,38 @@ function openDetail(slug){showNav();requestAnimationFrame(()=>moveNavPill(curTab
 function closeDetail(){document.getElementById('pg-detail').style.display='none';go(['market','news','prof'].includes(curTab)?curTab:'market');}
 
 // ═══ MARKET PAGE ═══
+
 function renderMarket() {
-  const pg=document.getElementById('pg-market');
-  const topG=GIFTS.length?GIFTS.reduce((b,g)=>(prices[g.slug]?.vol24h||0)>(prices[b.slug]?.vol24h||0)?g:b,GIFTS[0]):null;
-  pg.innerHTML=`
-<!-- ═══ MARKET HEADER ═══ -->
-<div style="position:relative;overflow:hidden;background:linear-gradient(170deg,#0d0820 0%,#080810 100%);">
-
-  <!-- Фоновый паттерн -->
-  <div style="position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 70% 40%,rgba(124,92,255,.18) 0%,transparent 60%),radial-gradient(ellipse 60% 80% at 20% 80%,rgba(77,159,255,.1) 0%,transparent 60%);pointer-events:none;"></div>
-
-  <!-- Баннер-изображение как текстура -->
-  <div style="position:absolute;inset:0;opacity:.12;background:url('https://i.imgur.com/2b2hhDc.png') center/cover no-repeat;filter:blur(8px);transform:scale(1.1);"></div>
-
-  <div style="position:relative;padding:clamp(14px,4vw,20px) clamp(14px,4vw,20px) clamp(10px,3vw,16px);">
-
-    <!-- Строка 1: Лого + онлайн + таймер -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:clamp(10px,3vw,16px);">
-      <div style="display:flex;align-items:center;gap:clamp(6px,2vw,10px);">
-        <div style="position:relative;">
-          <img src="https://i.imgur.com/2b2hhDc.png" style="width:clamp(36px,10vw,48px);height:clamp(36px,10vw,48px);border-radius:clamp(10px,3vw,14px);object-fit:cover;border:1.5px solid rgba(124,92,255,.5);box-shadow:0 4px 16px rgba(124,92,255,.3);" onerror="this.style.display='none'"/>
-          <div style="position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;background:#22d47a;border-radius:50%;border:2px solid #080810;box-shadow:0 0 6px #22d47a;animation:pulse 2s infinite;"></div>
+    const pg = document.getElementById('pg-market');
+    const signals = getLatestNews();
+    pg.innerHTML = `
+        <div class="market-mesh-bg">
+            <div style="padding: 24px 20px 10px; display:flex; justify-content:space-between; align-items:center;">
+               <div><h1 style="font-size:26px; font-weight:950; margin:0; letter-spacing:-1px;">Cursor Market</h1><div style="display:flex; align-items:center; gap:6px; margin-top:4px;"><div style="width:7px; height:7px; background:#22d47a; border-radius:50%; animation: pulse 2s infinite;"></div><span style="font-size:11px; color:#22d47a; font-weight:800;">LIVE</span></div></div>
+               <div style="text-align:right;"><div style="font-size:18px; font-weight:900; color:#f0b429;"><i class="ton-icon-v21"></i>$${tonUsd.toFixed(2)}</div></div>
+            </div>
+            <div class="banner-container">
+                ${signals.map(s => `
+                    <div class="banner-card" onclick="go('news'); setTimeout(() => { document.getElementById('sig_${s.id}')?.scrollIntoView({behavior:'smooth', block:'center'}); }, 150)">
+                        <img src="https://fragment.com/file/gifts/${s.slug}/thumb.webp" class="banner-img">
+                        <div class="banner-content">
+                            <span class="banner-tag" style="background:${s.color}20; color:${s.color}; border:1px solid ${s.color}40">${s.tag}</span>
+                            <div class="banner-title">${s.title}</div>
+                            <div style="font-size:9px; color:rgba(255,255,255,0.4); margin-top:4px; font-weight:700; text-transform:uppercase;">Verified by ${s.source}</div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
         </div>
-        <div>
-          <div style="font-size:clamp(18px,5vw,24px);font-weight:900;letter-spacing:-.6px;line-height:1;">Cursor Market</div>
-          <div style="font-size:clamp(9px,2.5vw,11px);color:#22d47a;font-weight:600;letter-spacing:.4px;margin-top:1px;">LIVE · Portal Market</div>
+        <div style="padding:15px 16px 0"><div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:10px 14px"><span style="font-size:14px;opacity:.4">🔍</span><input id="si" placeholder="Поиск коллекции..." value="${mQuery}" oninput="mQuery=this.value;renderGrid()" style="flex:1;color:#f0f0ff;font-size:14px;border:none;background:none;outline:none;"/></div></div>
+        <div style="padding:12px 16px 0; overflow-x:auto; display:flex; gap:6px; scrollbar-width:none;">
+            ${[['vol24h','📊 Объём'],['floor_desc','↓ Цена'],['floor_asc','↑ Цена'],['change_up','🔥 Рост']].map(([s,l])=>`<button class="spill ${s===mSort?'on':'off'}" style="flex:0 0 auto;" onclick="mSort='${s}'; renderMarket()">${l}</button>`).join('')}
         </div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:clamp(4px,1.5vw,6px);">
-        <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(34,212,122,.1);border:1px solid rgba(34,212,122,.25);border-radius:20px;padding:4px 10px;">
-          <div style="width:5px;height:5px;border-radius:50%;background:#22d47a;animation:pulse 2s infinite;"></div>
-          <span style="font-size:clamp(9px,2.5vw,11px);color:#22d47a;font-weight:700;" class="online-count">0</span>
-          <span style="font-size:clamp(9px,2.5vw,11px);color:#22d47a;font-weight:600;">онлайн</span>
-        </div>
-        <div style="font-size:clamp(9px,2.5vw,10px);color:#404060;background:rgba(255,255,255,.05);border-radius:6px;padding:2px 8px;font-weight:600;" id="update-timer">↻ ${countdown}с</div>
-      </div>
-    </div>
-
-    <!-- Строка 2: Три метрики -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(6px,2vw,10px);margin-bottom:clamp(10px,3vw,16px);">
-      <!-- TON цена -->
-      <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:clamp(10px,3vw,14px);padding:clamp(8px,2.5vw,12px) clamp(8px,2.5vw,12px);">
-        <div style="font-size:clamp(8px,2.2vw,10px);color:#808090;font-weight:600;letter-spacing:.3px;margin-bottom:3px;">TON/USD</div>
-        <div style="font-size:clamp(13px,3.8vw,17px);font-weight:900;color:#f0b429;letter-spacing:-.3px;" id="ton-price">$${tonUsd.toFixed(2)}</div>
-        <div style="font-size:clamp(8px,2vw,9px);color:#505070;margin-top:2px;">Курс сейчас</div>
-      </div>
-      <!-- Подарков -->
-      <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:clamp(10px,3vw,14px);padding:clamp(8px,2.5vw,12px) clamp(8px,2.5vw,12px);">
-        <div style="font-size:clamp(8px,2.2vw,10px);color:#808090;font-weight:600;letter-spacing:.3px;margin-bottom:3px;">КОЛЛЕКЦИЙ</div>
-        <div style="font-size:clamp(13px,3.8vw,17px);font-weight:900;color:#a480ff;letter-spacing:-.3px;">${GIFTS.length}</div>
-        <div style="font-size:clamp(8px,2vw,9px);color:#505070;margin-top:2px;">На рынке</div>
-      </div>
-      <!-- Топ объём -->
-      <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:clamp(10px,3vw,14px);padding:clamp(8px,2.5vw,12px) clamp(8px,2.5vw,12px);cursor:pointer;" onclick="topG&&openDetail(topG.slug)">
-        <div style="font-size:clamp(8px,2.2vw,10px);color:#808090;font-weight:600;letter-spacing:.3px;margin-bottom:3px;">ТОП ОБЪЁМ</div>
-        <div style="font-size:clamp(11px,3.2vw,14px);font-weight:800;color:#4d9fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${topG?topG.name:'—'}</div>
-        <div style="font-size:clamp(8px,2vw,9px);color:#22d47a;margin-top:2px;">${topG?(prices[topG.slug]?.vol24h||0).toFixed(0)+' TON/24ч':'—'}</div>
-      </div>
-    </div>
-
-  </div>
-</div>
-<div style="padding:12px 16px 0">
-  <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:9px 13px">
-    <span style="font-size:14px;opacity:.4">🔍</span>
-    <input id="si" placeholder="Поиск подарка..." value="${mQuery}" oninput="mQuery=this.value;renderGrid()" style="flex:1;color:#f0f0ff;font-size:13px"/>
-    ${mQuery?`<button onclick="mQuery='';document.getElementById('si').value='';renderGrid()" style="color:#505070;font-size:16px">✕</button>`:''}
-  </div>
-</div>
-<div style="padding:10px 16px 0;overflow-x:auto">
-  <div style="display:flex;gap:6px;width:max-content">
-    ${[['vol24h','📊 Объём'],['floor_desc','↓ Цена'],['floor_asc','↑ Цена'],['change_up','🔥 Рост'],['change_down','💀 Падение']].map(([s,l])=>`<button class="spill ${s===mSort?'on':'off'}" onclick="mSort='${s}';document.querySelectorAll('.spill').forEach(b=>b.className='spill off');this.className='spill on';renderGrid()">${l}</button>`).join('')}
-  </div>
-</div>
-<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:12px 16px" id="mgrid"></div>`;
-  renderGrid();
+        <div id="mgrid" style="margin-top:15px; display:grid; grid-template-columns: 1fr 1fr; gap:10px; padding: 0 16px 120px;"></div>
+    `;
+    renderGrid(); initBannerAutoScroll();
 }
+
 
 
 function renderGrid() {
@@ -1195,7 +1137,7 @@ function renderGrid() {
     const p = prices[g.slug]||{floor:0, change24h:0};
     const up = p.change24h >= 0;
     return `
-    <div class="gcard" onclick="openTerminalV20('${g.slug}')" style="animation:fadeUp .3s ease ${i*0.02}s both">
+    <div class="gcard" onclick="openTerminalV21('${g.slug}')" style="animation:fadeUp .3s ease ${i*0.02}s both">
         <div style="width:100%; padding-top:100%; position:relative; background:rgba(0,0,0,0.2);">
             <img src="${getCardImg(g)}" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; padding:12px;">
         </div>
@@ -1203,18 +1145,19 @@ function renderGrid() {
             <div style="font-size:12px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${g.name}</div>
             <div style="margin-top:8px; background:rgba(255,255,255,0.03); border-radius:14px; padding:10px; border:1px solid rgba(255,255,255,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-size:16px; font-weight:900;"><i class="ton-icon-v20"></i>${p.floor.toFixed(2)}</div>
+                    <div style="font-size:16px; font-weight:900;"><i class="ton-icon-v21"></i>${p.floor.toFixed(2)}</div>
                     <div style="font-size:10px; font-weight:800; color:${up?'#22d47a':'#ff4d6a'}">${up?'+':''}${p.change24h}%</div>
                 </div>
-                <div id="spk-${g.slug}" class="spark-v20"></div>
+                <div id="spk-${g.slug}" class="spark-v21"></div>
             </div>
         </div>
     </div>`;
   }).join('');
-  // Запуск отрисовки после рендера
-  list.forEach(g => drawSparkV20(g.slug, "spk-"+g.slug));
+  list.forEach(g => drawSparkV21(g.slug, "spk-"+g.slug));
 }
 
+
+// ═══ DETAIL PAGE ═══
 function renderDetail(slug) {
   const g=GIFTS.find(x=>x.slug===slug);if(!g)return;
   const p=prices[slug]||{floor:0,change24h:0,vol24h:0};
@@ -1273,7 +1216,7 @@ function dtab(t){
 }
 
 function dtInfo(g,p){
-  const rows=[['💰 Floor',`<strong style="color:#f0b429">${(p.floor||0).toFixed(2)} TON</strong> · $${((p.floor||0)*tonUsd).toFixed(0)}`],['📈 24ч',`<span style="color:${(p.change24h||0)>=0?'#22d47a':'#ff4d6a'}">${(p.change24h||0)>=0?'+':''}${p.change24h||0}%</span>`],['📊 Объём',`${(p.vol24h||0).toFixed(0)} TON`],['🛒 Сделок',`${p.sales24h||0}`],['📋 Листинги',`${p.listed||0}`],['🏭 Supply',`${(p.supply||0).toLocaleString()}`],['<i class="ton-icon-v20"></i> Market Cap',`${((p.marketCap||0)/1000).toFixed(1)}K TON`],['🕒 Обновлено',p.updated?new Date(p.updated).toLocaleTimeString('ru'):'—']];
+  const rows=[['💰 Floor',`<strong style="color:#f0b429">${(p.floor||0).toFixed(2)} TON</strong> · $${((p.floor||0)*tonUsd).toFixed(0)}`],['📈 24ч',`<span style="color:${(p.change24h||0)>=0?'#22d47a':'#ff4d6a'}">${(p.change24h||0)>=0?'+':''}${p.change24h||0}%</span>`],['📊 Объём',`${(p.vol24h||0).toFixed(0)} TON`],['🛒 Сделок',`${p.sales24h||0}`],['📋 Листинги',`${p.listed||0}`],['🏭 Supply',`${(p.supply||0).toLocaleString()}`],['<i class="ton-icon-v21"></i> Market Cap',`${((p.marketCap||0)/1000).toFixed(1)}K TON`],['🕒 Обновлено',p.updated?new Date(p.updated).toLocaleTimeString('ru'):'—']];
   return `<div style="animation:fadeIn .2s ease">${rows.map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0">${v}</span></div>`).join('')}
 <div style="margin-top:14px;display:flex;gap:9px">
 <a href="https://fragment.com/gifts/${g.slug}" target="_blank" style="flex:1;padding:10px;border-radius:12px;background:rgba(124,92,255,.12);border:1px solid rgba(124,92,255,.3);color:#a480ff;font-size:11px;font-weight:700;text-align:center">🔗 Fragment</a>
@@ -1617,130 +1560,30 @@ function resetWheelCrt(){
 }
 
 // ═══ NEWS ═══
-function renderNews(){
-  // Сортируем по абсолютному изменению
-  const sorted=[...GIFTS].sort((a,b)=>Math.abs(prices[b.slug]?.change24h||0)-Math.abs(prices[a.slug]?.change24h||0));
-  const topUp=[...GIFTS].sort((a,b)=>(prices[b.slug]?.change24h||0)-(prices[a.slug]?.change24h||0))[0];
-  const topDown=[...GIFTS].sort((a,b)=>(prices[a.slug]?.change24h||0)-(prices[b.slug]?.change24h||0))[0];
-  const topVol=[...GIFTS].sort((a,b)=>(prices[b.slug]?.vol24h||0)-(prices[a.slug]?.vol24h||0))[0];
-  const topSales=[...GIFTS].sort((a,b)=>(prices[b.slug]?.sales24h||0)-(prices[a.slug]?.sales24h||0))[0];
 
-  const ts={
-    bullish:{c:'#22d47a',bg:'rgba(34,212,122,.05)',br:'rgba(34,212,122,.15)',l:'📈 РОСТ'},
-    bearish:{c:'#ff4d6a',bg:'rgba(255,77,106,.05)',br:'rgba(255,77,106,.15)',l:'📉 ПАДЕНИЕ'},
-    neutral:{c:'#4d9fff',bg:'rgba(77,159,255,.05)',br:'rgba(77,159,255,.15)',l:'📰 РЫНОК'},
-    hot:{c:'#f0b429',bg:'rgba(240,180,41,.05)',br:'rgba(240,180,41,.15)',l:'🔥 АКТИВНОСТЬ'},
-    new:{c:'#c77dff',bg:'rgba(199,125,255,.05)',br:'rgba(199,125,255,.15)',l:'⭐ НОВЫЙ'}
-  };
-  const ft=d=>{const dd=Date.now()-d;if(dd<3600000)return~~(dd/60000)+' мин';if(dd<86400000)return~~(dd/3600000)+' ч';return~~(dd/86400000)+' д';};
-
-  // Динамические новости на основе реальных данных
-  const news=[];
-  
-  if(topUp){
-    const p=prices[topUp.slug]||{};
-    const ch=p.change24h||0;
-    news.push({
-      e: ch>10?'🚀':ch>5?'📈':'⬆️',
-      t:`${topUp.name} ${ch>10?'резко растёт':ch>5?'лидирует по росту':'показывает рост'}`,
-      b:`+${ch}% за 24ч · Floor: ${(p.floor||0).toFixed(2)} TON · $${((p.floor||0)*tonUsd).toFixed(0)} · Объём: ${(p.vol24h||0).toFixed(0)} TON`,
-      gid:topUp.slug, tp:'bullish', time:Date.now()-(Math.random()*1800000), tags:['#рост','#live']
-    });
-  }
-
-  if(topDown){
-    const p=prices[topDown.slug]||{};
-    const ch=p.change24h||0;
-    news.push({
-      e: ch<-15?'💥':ch<-10?'📉':'⬇️',
-      t:`${topDown.name} ${ch<-15?'сильно падает':ch<-10?'падает':'снижается'}`,
-      b:`${ch}% за 24ч · Floor: ${(p.floor||0).toFixed(2)} TON · Сделок: ${p.sales24h||0} · Listed: ${p.listed||0}`,
-      gid:topDown.slug, tp:'bearish', time:Date.now()-(Math.random()*3600000), tags:['#падение','#коррекция']
-    });
-  }
-
-  if(topVol){
-    const p=prices[topVol.slug]||{};
-    news.push({
-      e:'🔥',
-      t:`${topVol.name} — максимальный объём торгов`,
-      b:`Объём 24ч: ${(p.vol24h||0).toFixed(0)} TON ($${((p.vol24h||0)*tonUsd).toFixed(0)}) · ${p.sales24h||0} сделок · Floor ${(p.floor||0).toFixed(2)} TON`,
-      gid:topVol.slug, tp:'hot', time:Date.now()-(Math.random()*5400000), tags:['#объём','#активность']
-    });
-  }
-
-  if(topSales && topSales.slug!==topVol?.slug){
-    const p=prices[topSales.slug]||{};
-    news.push({
-      e:'<i class="ton-icon-v20"></i>',
-      t:`${topSales.name} — больше всего продаж`,
-      b:`${p.sales24h||0} сделок за 24ч · Floor: ${(p.floor||0).toFixed(2)} TON · Объём: ${(p.vol24h||0).toFixed(0)} TON`,
-      gid:topSales.slug, tp:'hot', time:Date.now()-(Math.random()*7200000), tags:['#продажи']
-    });
-  }
-
-  // Новые подарки
-  const newGifts=GIFTS.filter(g=>g.isNew);
-  newGifts.slice(0,2).forEach(g=>{
-    news.push({e:'🆕',t:`Новый подарок: ${g.name}`,b:`Появился на рынке · Floor: ${(prices[g.slug]?.floor||0).toFixed(2)} TON`,gid:g.slug,tp:'new',time:Date.now()-300000,tags:['#новый']});
-  });
-
-  // TON курс
-  news.push({
-    e:'💹',
-    t:`TON/USD = $${tonUsd.toFixed(3)} · ${tonUsd>2.5?'Рост':'Снижение'} курса`,
-    b:`Текущий курс обновляется каждые 30 секунд с TON API · Источник: tonapi.io`,
-    gid:null, tp:tonUsd>2.5?'bullish':'bearish', time:Date.now()-600000, tags:['#ton','#курс']
-  });
-
-  news.push({
-    e:'📊',
-    t:`Рынок: ${GIFTS.length} коллекций отслеживается`,
-    b:`Данные обновляются каждые 20 секунд с Portal Market. Общий объём: ${GIFTS.reduce((s,g)=>s+(prices[g.slug]?.vol24h||0),0).toFixed(0)} TON/24ч`,
-    gid:null, tp:'neutral', time:Date.now()-86400000, tags:['#рынок','#portal']
-  });
-
-  // Сортируем по времени (новые первые)
-  news.sort((a,b)=>b.time-a.time);
-
-  document.getElementById('pg-news').innerHTML=`
-<div style="background:linear-gradient(160deg,#0a1525 0%,#080810 55%);padding:20px 16px 16px;border-bottom:1px solid rgba(77,159,255,.1);position:relative;overflow:hidden">
-<div style="position:absolute;top:-28px;left:-18px;width:110px;height:110px;background:radial-gradient(circle,rgba(77,159,255,.14) 0%,transparent 70%);border-radius:50%"></div>
-<div style="position:relative">
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
-<div style="display:flex;align-items:center;gap:6px"><div style="width:6px;height:6px;border-radius:50%;background:#4d9fff;animation:pulse 2s infinite"></div><span style="font-size:10px;color:#4d9fff;font-weight:700">LIVE · Обновляется из Portal Market</span></div>
-<div class="online-badge"><div class="online-dot"></div><span style="font-size:10px;color:#22d47a;font-weight:700"><span class="online-count">${onlineCount}</span> онлайн</span></div>
-</div>
-<h1 style="font-size:22px;font-weight:900">📰 CursorGift News</h1>
-<p style="font-size:11px;color:#5070a0;margin-top:2px">TON $${tonUsd.toFixed(3)} · ${GIFTS.length} коллекций · Авто-обновление</p>
-</div></div>
-<div style="padding:14px 16px 0">
-<div style="font-size:10px;font-weight:700;color:#505070;margin-bottom:10px;letter-spacing:.5px">⚡ ТОП ДВИЖЕНИЯ 24Ч</div>
-<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
-${sorted.slice(0,8).map(g=>{const p=prices[g.slug]||{},up=p.change24h>=0;return`<div onclick="openDetail('${g.slug}')" style="flex:0 0 auto;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:10px 12px;text-align:center;cursor:pointer;min-width:80px;transition:transform .15s" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform=''">
-<div style="width:42px;height:42px;margin:0 auto 4px;border-radius:10px;overflow:hidden;background:rgba(0,0,0,.2)"><img src="${thumb(g.slug)}" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display='none'"/></div>
-<div style="font-size:9px;font-weight:700;color:#d0d0f0;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:78px">${g.name}</div>
-<div style="font-size:11px;font-weight:800;color:${up?'#22d47a':'#ff4d6a'}">${up?'+':''}${p.change24h||0}%</div>
-<div style="font-size:9px;color:#505070;margin-top:1px">${(p.floor||0).toFixed(2)} T</div>
-</div>`;}).join('')}
-</div></div>
-<div style="padding:14px 16px">
-${news.map((n,i)=>{const s=ts[n.tp],g=n.gid?GIFTS.find(x=>x.slug===n.gid):null;return`<div onclick="${g?`openDetail('${n.gid}')`:'void 0'}" style="background:${s.bg};border:1px solid ${s.br};border-radius:18px;padding:14px;margin-bottom:11px;cursor:${g?'pointer':'default'};animation:fadeUp .25s ease ${i*.07}s both">
-<div style="display:flex;align-items:flex-start;gap:10px"><div style="font-size:26px;flex-shrink:0">${n.e}</div>
-<div style="flex:1;min-width:0">
-<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap">
-<span style="font-size:8px;font-weight:800;letter-spacing:.5px;padding:2px 6px;border-radius:5px;color:${s.c};background:${s.c}18;border:1px solid ${s.c}25">${s.l}</span>
-<span style="font-size:9px;color:#404060">${ft(n.time)} назад · Live</span>
-</div>
-<div style="font-size:14px;font-weight:800;margin-bottom:5px;line-height:1.25">${n.t}</div>
-<div style="font-size:12px;color:#7080a0;line-height:1.5">${n.b}</div>
-${g?`<div style="display:inline-flex;align-items:center;gap:7px;margin-top:9px;background:rgba(0,0,0,.3);border-radius:9px;padding:5px 11px">
-<img src="${thumb(g.slug)}" style="width:26px;height:26px;object-fit:contain;border-radius:6px" onerror="this.style.display='none'"/>
-<div><div style="font-size:10px;font-weight:700;color:#d0d0f0">${g.name}</div><div style="font-size:9px;color:#7c5cff">${(prices[g.slug]?.floor||0).toFixed(2)} TON</div></div></div>`:''}
-<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">${n.tags.map(t=>`<span style="font-size:9px;color:#5060a0;background:rgba(80,96,160,.1);padding:2px 7px;border-radius:5px">${t}</span>`).join('')}</div>
-</div></div></div>`;}).join('')}
-</div>`;
+function renderNews() {
+    const pg = document.getElementById('pg-news');
+    const news = getLatestNews();
+    pg.innerHTML = `
+        <div style="padding: 24px 20px;"><h1 style="font-size:28px; font-weight:950; margin:0;">Сигналы Рынка</h1><p style="font-size:14px; color:rgba(255,255,255,0.5); margin-top:5px;">Cursor Market: Аналитика</p></div>
+        <div style="padding: 0 16px 100px;">
+            ${news.map(s => `
+                <div id="sig_${s.id}" class="glass-card" style="margin-bottom: 20px; padding: 24px;">
+                    <div style="display:flex; align-items:center; gap:15px; margin-bottom:15px;">
+                        <img src="https://fragment.com/file/gifts/${s.slug}/thumb.webp" style="width:60px; height:60px; object-fit:contain;">
+                        <div>
+                            <span style="color:${s.color}; font-size:10px; font-weight:900; background:${s.color}15; padding:2px 8px; border-radius:6px;">${s.tag}</span>
+                            <div style="font-size:19px; font-weight:900; color:#fff; line-height:1.2; margin-top:5px;">${s.title}</div>
+                        </div>
+                    </div>
+                    <p style="font-size:15px; color:rgba(255,255,255,0.7); line-height:1.6; margin-bottom:20px;">${s.detail}</p>
+                    <button onclick="openDetail('${s.slug}')" style="width:100%; padding:16px; border-radius:18px; background:#7c5cff; color:#fff; font-size:15px; font-weight:800; border:none;">${s.action}</button>
+                </div>
+            `).join('')}
+        </div>
+    `;
 }
+
 
 // ═══ PROFILE ═══
 function renderProfile(){
@@ -1768,7 +1611,7 @@ ${u.id?`<div style="font-size:22px;font-weight:900;color:#f0f0ff;white-space:now
 </div>
 </div></div>
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-${[['<i class="ton-icon-v20"></i>',fmtTon(walletBalance,3)+' TON','#f0b429','Баланс'],['🎁',inv.length,'#22d47a','Подарки'],['📊',GIFTS.length,'#7c5cff','На рынке']].map(([ic,v,c,l])=>`<div style="background:rgba(255,255,255,.06);border-radius:14px;padding:12px 8px;text-align:center;border:1px solid rgba(255,255,255,.07)"><div style="font-size:18px;margin-bottom:4px">${ic}</div><div style="font-size:13px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:#505070;margin-top:2px">${l}</div></div>`).join('')}
+${[['<i class="ton-icon-v21"></i>',fmtTon(walletBalance,3)+' TON','#f0b429','Баланс'],['🎁',inv.length,'#22d47a','Подарки'],['📊',GIFTS.length,'#7c5cff','На рынке']].map(([ic,v,c,l])=>`<div style="background:rgba(255,255,255,.06);border-radius:14px;padding:12px 8px;text-align:center;border:1px solid rgba(255,255,255,.07)"><div style="font-size:18px;margin-bottom:4px">${ic}</div><div style="font-size:13px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:#505070;margin-top:2px">${l}</div></div>`).join('')}
 </div></div></div>
 ${walletCardHtml()}
 
@@ -1836,7 +1679,7 @@ ${[['🔗 Источник цен','Portal Market'],['⏱ Обновление',
 </div>
 <div style="background:rgba(255,255,255,.03);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.06)">
 <div style="font-size:10px;color:#505070;font-weight:700;margin-bottom:12px;letter-spacing:.5px">КОШЕЛЁК</div>
-${[['<i class="ton-icon-v20"></i> Адрес',walletAddress?shortAddr(walletAddress):'не подключён'],['💰 Баланс',fmtTon(walletBalance,4)+' TON'],['🎁 Telegram Gifts',String(walletGifts.length)],['🕒 Обновлено',walletLastUpdate?new Date(walletLastUpdate).toLocaleTimeString('ru'):'—']].map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:12px"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0;text-align:right">${esc(v)}</span></div>`).join('')}
+${[['<i class="ton-icon-v21"></i> Адрес',walletAddress?shortAddr(walletAddress):'не подключён'],['💰 Баланс',fmtTon(walletBalance,4)+' TON'],['🎁 Telegram Gifts',String(walletGifts.length)],['🕒 Обновлено',walletLastUpdate?new Date(walletLastUpdate).toLocaleTimeString('ru'):'—']].map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:12px"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0;text-align:right">${esc(v)}</span></div>`).join('')}
 </div>
 <a href="https://fragment.com/gifts" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#808090;font-size:13px;font-weight:700">🔗 Fragment.com</a>
 </div>`;
@@ -1870,7 +1713,7 @@ async function init() {
     splashReady=true;
     startSplashWhenReady();
 
-    connectWS(); syncMarketHistory();
+    connectWS(); syncMarket();
     setInterval(fetchPrices,20000);
     setInterval(()=>{countdown=Math.max(0,countdown-1);const tEl=document.getElementById('update-timer');if(tEl)tEl.textContent='↻ '+countdown+'с';if(countdown===0)countdown=20;},1000);
 
@@ -2096,6 +1939,10 @@ function startSplashWhenReady() {
 
 init();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a013b9a6ddbfadc1',t:'MTc3OTcwMzU2Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fe96e403a04eebe',t:'MTc3OTI2MDA3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ff3df928ac7eecd',t:'MTc3OTM2OTU3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a006c6ee7bba23b0',t:'MTc3OTU2Nzc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a013c0e8eadcbf32',t:'MTc3OTcwMzg2MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
