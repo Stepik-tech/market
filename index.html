@@ -44,7 +44,7 @@ html, body { font-size: var(--fs-base); }
 /* Fluid back btn */
 .back { width:clamp(34px,9vw,42px); height:clamp(34px,9vw,42px); font-size:clamp(17px,5vw,22px); }
 
-/* --- Arena v22 Fixed Premium --- */
+/* --- Arena v23: Working Charts & Premium Banners --- */
 :root {
   --app-w: min(100vw, 450px);
   --glass: rgba(255, 255, 255, 0.05);
@@ -67,15 +67,17 @@ body {
   box-shadow: 0 0 100px #000 !important;
   min-height: 100dvh;
   position: relative !important;
+  display: flex;
+  flex-direction: column;
 }
 
-.ton-icon-v22 {
+.ton-icon-v23 {
     width: 16px; height: 16px; display: inline-block; vertical-align: middle;
     background: url('https://ton.org/download/ton_symbol.svg') center/contain no-repeat;
     margin-right: 4px;
 }
 
-/* Banners */
+/* Banners (Premium) */
 .banner-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 0; padding: 15px 0 25px; scrollbar-width: none; scroll-behavior: smooth; }
 .banner-card {
     flex: 0 0 calc(100% - 32px); margin: 0 16px; scroll-snap-align: center;
@@ -83,10 +85,10 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 26px; padding: 18px;
     display: flex; align-items: center; gap: 15px; box-sizing: border-box; height: 110px;
 }
-.banner-img { width: 70px; height: 70px; border-radius: 18px; object-fit: contain; background: rgba(0,0,0,0.2); }
-.banner-title { font-size: 14px; font-weight: 700; color: #fff; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.banner-img { width: 70px; height: 70px; border-radius: 18px; object-fit: contain; background: rgba(0,0,0,0.2); flex-shrink: 0; }
+.banner-title { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
-.spark-v22 { width: 100%; height: 35px; margin-top: 8px; }
+.spark-v23 { width: 100%; height: 35px; margin-top: 8px; }
 
 </style>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -360,24 +362,31 @@ function getLatestNews() {
     return news;
 }
 
-function drawSparkV22(slug, id) {
+function drawSparklineV23(slug, id) {
     const el = document.getElementById(id);
     if (!el) return;
-    const pts = histories[slug] || [];
+    let pts = histories[slug] || [];
+    
+    // Если истории нет - восстанавливаем тренд из % изменения за 24ч
+    if (pts.length < 2 && prices[slug]) {
+        const p = prices[slug];
+        const oldPrice = p.floor / (1 + (p.change24h || 0)/100);
+        pts = [{price: oldPrice, time: Date.now()-86400000}, {price: (oldPrice + p.floor)/2, time: Date.now()-43200000}, {price: p.floor, time: Date.now()}];
+    }
+    
     if (pts.length < 2) return;
     const W = el.offsetWidth || 120, H = el.offsetHeight || 35;
-    const pArr = pts.slice(-30).map(p => p.price);
+    const pArr = pts.map(p => p.price);
     const min = Math.min(...pArr), max = Math.max(...pArr), range = (max - min) || 0.1;
     const color = pts[pts.length-1].price >= pts[0].price ? '#22d47a' : '#ff4d6a';
-    const draw = pArr.map((p, i) => `${(i * (W / (pArr.length - 1))).toFixed(1)},${(H - ((p - min) / range) * (H * 0.8) - 2).toFixed(1)}`);
+    const draw = pts.map((p, i) => `${(i * (W / (pts.length - 1))).toFixed(1)},${(H - ((p.price - min) / range) * (H * 0.8) - 2).toFixed(1)}`);
     el.innerHTML = `<svg width="100%" height="100%"><path d="M ${draw.join(' ')}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
 async function syncAllData() {
     const list = GIFTS.slice(0, 20);
     for(const g of list) {
-        await fetchHistory(g.slug);
-        drawSparkV22(g.slug, `spk-${g.slug}`);
+        fetchHistory(g.slug).then(() => drawSparklineV23(g.slug, `spk-${g.slug}`));
     }
 }
 
@@ -809,7 +818,7 @@ async function connectTonWallet(){
   // Fallback, если SDK не загрузился (например, в sandbox preview без сети)
   if (tg?.openLink) tg.openLink('https://app.tonkeeper.com/ton-connect');
   else window.open('https://app.tonkeeper.com/ton-connect','_blank');
-  showToast('<i class="ton-icon-v22"></i> TON Connect', 'Открой в браузере/Telegram, чтобы подключить кошелёк');
+  showToast('<i class="ton-icon-v23"></i> TON Connect', 'Открой в браузере/Telegram, чтобы подключить кошелёк');
 }
 async function disconnectTonWallet(){
   try { await tonConnectUI?.disconnect?.(); } catch(e){}
@@ -853,7 +862,7 @@ function walletCardHtml(){
   if (!walletAddress) {
     return `<div style="margin:14px 16px 0;background:linear-gradient(135deg,rgba(77,159,255,.12),rgba(124,92,255,.08));border:1px solid rgba(77,159,255,.25);border-radius:16px;padding:14px">
       <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:42px;height:42px;border-radius:12px;background:rgba(77,159,255,.12);display:flex;align-items:center;justify-content:center;font-size:22px"><i class="ton-icon-v22"></i></div>
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(77,159,255,.12);display:flex;align-items:center;justify-content:center;font-size:22px"><i class="ton-icon-v23"></i></div>
         <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;color:#f0f0ff">TON-кошелёк не подключён</div><div style="font-size:11px;color:#7080a0;margin-top:2px">Подключи Tonkeeper / Wallet, чтобы увидеть баланс и подарки</div></div>
       </div>
       <button onclick="connectTonWallet()" style="margin-top:12px;width:100%;padding:12px;border-radius:13px;background:linear-gradient(135deg,#4d9fff,#7c5cff);color:#fff;font-size:13px;font-weight:800;box-shadow:0 6px 20px rgba(77,159,255,.25)">🔗 Подключить кошелёк</button>
@@ -873,7 +882,7 @@ function walletCardHtml(){
   </div>`;
 }
 function marketWalletButtonHtml(){
-  if (walletAddress) return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(34,212,122,.08);border:1px solid rgba(34,212,122,.22);border-radius:10px;padding:6px 11px;color:#22d47a;font-size:11px;font-weight:800"><i class="ton-icon-v22"></i> ${fmtTon(walletBalance,3)} TON · ${esc(shortAddr(walletAddress))}</button>`;
+  if (walletAddress) return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(34,212,122,.08);border:1px solid rgba(34,212,122,.22);border-radius:10px;padding:6px 11px;color:#22d47a;font-size:11px;font-weight:800"><i class="ton-icon-v23"></i> ${fmtTon(walletBalance,3)} TON · ${esc(shortAddr(walletAddress))}</button>`;
   return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(124,92,255,.10);border:1px solid rgba(124,92,255,.28);border-radius:10px;padding:6px 11px;color:#a480ff;font-size:11px;font-weight:800">🔗 Подключить кошелёк</button>`;
 }
 
@@ -1063,7 +1072,7 @@ function renderMarket() {
         <div class="market-mesh-bg">
             <div style="padding: 24px 20px 10px; display:flex; justify-content:space-between; align-items:center;">
                <div><h1 style="font-size:26px; font-weight:950; margin:0; letter-spacing:-1px;">Cursor Market</h1><div style="display:flex; align-items:center; gap:6px; margin-top:4px;"><div style="width:7px; height:7px; background:#22d47a; border-radius:50%; animation: pulse 2s infinite;"></div><span style="font-size:11px; color:#22d47a; font-weight:800;">LIVE</span></div></div>
-               <div style="text-align:right;"><div style="font-size:18px; font-weight:900; color:#f0b429;"><i class="ton-icon-v22"></i>$${tonUsd.toFixed(2)}</div></div>
+               <div style="text-align:right;"><div style="font-size:18px; font-weight:900; color:#f0b429;"><i class="ton-icon-v23"></i>$${tonUsd.toFixed(2)}</div></div>
             </div>
             <div class="banner-container">
                 ${signals.map(s => `<div class="banner-card" onclick="go('news')"><img src="https://fragment.com/file/gifts/${s.slug}/thumb.webp" class="banner-img"><div class="banner-content"><span class="banner-tag" style="background:${s.color}20; color:${s.color}; border:1px solid ${s.color}40">${s.tag}</span><div class="banner-title">${s.title}</div><div style="font-size:10px; color:rgba(255,255,255,0.4); margin-top:4px; font-weight:700;">Verified by ${s.source}</div></div></div>`).join('')}
@@ -1102,15 +1111,15 @@ function renderGrid() {
             <div style="font-size:12px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${g.name}</div>
             <div style="margin-top:8px; background:rgba(255,255,255,0.03); border-radius:14px; padding:10px; border:1px solid rgba(255,255,255,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-size:16px; font-weight:900;"><i class="ton-icon-v22"></i>${p.floor.toFixed(2)}</div>
+                    <div style="font-size:16px; font-weight:900;"><i class="ton-icon-v23"></i>${p.floor.toFixed(2)}</div>
                     <div style="font-size:10px; font-weight:800; color:${up?'#22d47a':'#ff4d6a'}">${up?'+':''}${p.change24h}%</div>
                 </div>
-                <div id="spk-${g.slug}" class="spark-v22"></div>
+                <div id="spk-${g.slug}" class="spark-v23"></div>
             </div>
         </div>
     </div>`;
   }).join('');
-  setTimeout(() => { list.forEach(g => drawSparkV22(g.slug, "spk-"+g.slug)); }, 50);
+  setTimeout(() => { list.forEach(g => drawSparklineV23(g.slug, "spk-"+g.slug)); }, 50);
 }
 
 
@@ -1173,7 +1182,7 @@ function dtab(t){
 }
 
 function dtInfo(g,p){
-  const rows=[['💰 Floor',`<strong style="color:#f0b429">${(p.floor||0).toFixed(2)} TON</strong> · $${((p.floor||0)*tonUsd).toFixed(0)}`],['📈 24ч',`<span style="color:${(p.change24h||0)>=0?'#22d47a':'#ff4d6a'}">${(p.change24h||0)>=0?'+':''}${p.change24h||0}%</span>`],['📊 Объём',`${(p.vol24h||0).toFixed(0)} TON`],['🛒 Сделок',`${p.sales24h||0}`],['📋 Листинги',`${p.listed||0}`],['🏭 Supply',`${(p.supply||0).toLocaleString()}`],['<i class="ton-icon-v22"></i> Market Cap',`${((p.marketCap||0)/1000).toFixed(1)}K TON`],['🕒 Обновлено',p.updated?new Date(p.updated).toLocaleTimeString('ru'):'—']];
+  const rows=[['💰 Floor',`<strong style="color:#f0b429">${(p.floor||0).toFixed(2)} TON</strong> · $${((p.floor||0)*tonUsd).toFixed(0)}`],['📈 24ч',`<span style="color:${(p.change24h||0)>=0?'#22d47a':'#ff4d6a'}">${(p.change24h||0)>=0?'+':''}${p.change24h||0}%</span>`],['📊 Объём',`${(p.vol24h||0).toFixed(0)} TON`],['🛒 Сделок',`${p.sales24h||0}`],['📋 Листинги',`${p.listed||0}`],['🏭 Supply',`${(p.supply||0).toLocaleString()}`],['<i class="ton-icon-v23"></i> Market Cap',`${((p.marketCap||0)/1000).toFixed(1)}K TON`],['🕒 Обновлено',p.updated?new Date(p.updated).toLocaleTimeString('ru'):'—']];
   return `<div style="animation:fadeIn .2s ease">${rows.map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0">${v}</span></div>`).join('')}
 <div style="margin-top:14px;display:flex;gap:9px">
 <a href="https://fragment.com/gifts/${g.slug}" target="_blank" style="flex:1;padding:10px;border-radius:12px;background:rgba(124,92,255,.12);border:1px solid rgba(124,92,255,.3);color:#a480ff;font-size:11px;font-weight:700;text-align:center">🔗 Fragment</a>
@@ -1572,7 +1581,7 @@ function renderNews(){
   if(topSales && topSales.slug!==topVol?.slug){
     const p=prices[topSales.slug]||{};
     news.push({
-      e:'<i class="ton-icon-v22"></i>',
+      e:'<i class="ton-icon-v23"></i>',
       t:`${topSales.name} — больше всего продаж`,
       b:`${p.sales24h||0} сделок за 24ч · Floor: ${(p.floor||0).toFixed(2)} TON · Объём: ${(p.vol24h||0).toFixed(0)} TON`,
       gid:topSales.slug, tp:'hot', time:Date.now()-(Math.random()*7200000), tags:['#продажи']
@@ -1668,7 +1677,7 @@ ${u.id?`<div style="font-size:22px;font-weight:900;color:#f0f0ff;white-space:now
 </div>
 </div></div>
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-${[['<i class="ton-icon-v22"></i>',fmtTon(walletBalance,3)+' TON','#f0b429','Баланс'],['🎁',inv.length,'#22d47a','Подарки'],['📊',GIFTS.length,'#7c5cff','На рынке']].map(([ic,v,c,l])=>`<div style="background:rgba(255,255,255,.06);border-radius:14px;padding:12px 8px;text-align:center;border:1px solid rgba(255,255,255,.07)"><div style="font-size:18px;margin-bottom:4px">${ic}</div><div style="font-size:13px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:#505070;margin-top:2px">${l}</div></div>`).join('')}
+${[['<i class="ton-icon-v23"></i>',fmtTon(walletBalance,3)+' TON','#f0b429','Баланс'],['🎁',inv.length,'#22d47a','Подарки'],['📊',GIFTS.length,'#7c5cff','На рынке']].map(([ic,v,c,l])=>`<div style="background:rgba(255,255,255,.06);border-radius:14px;padding:12px 8px;text-align:center;border:1px solid rgba(255,255,255,.07)"><div style="font-size:18px;margin-bottom:4px">${ic}</div><div style="font-size:13px;font-weight:900;color:${c}">${v}</div><div style="font-size:9px;color:#505070;margin-top:2px">${l}</div></div>`).join('')}
 </div></div></div>
 ${walletCardHtml()}
 
@@ -1736,7 +1745,7 @@ ${[['🔗 Источник цен','Portal Market'],['⏱ Обновление',
 </div>
 <div style="background:rgba(255,255,255,.03);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.06)">
 <div style="font-size:10px;color:#505070;font-weight:700;margin-bottom:12px;letter-spacing:.5px">КОШЕЛЁК</div>
-${[['<i class="ton-icon-v22"></i> Адрес',walletAddress?shortAddr(walletAddress):'не подключён'],['💰 Баланс',fmtTon(walletBalance,4)+' TON'],['🎁 Telegram Gifts',String(walletGifts.length)],['🕒 Обновлено',walletLastUpdate?new Date(walletLastUpdate).toLocaleTimeString('ru'):'—']].map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:12px"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0;text-align:right">${esc(v)}</span></div>`).join('')}
+${[['<i class="ton-icon-v23"></i> Адрес',walletAddress?shortAddr(walletAddress):'не подключён'],['💰 Баланс',fmtTon(walletBalance,4)+' TON'],['🎁 Telegram Gifts',String(walletGifts.length)],['🕒 Обновлено',walletLastUpdate?new Date(walletLastUpdate).toLocaleTimeString('ru'):'—']].map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:12px"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0;text-align:right">${esc(v)}</span></div>`).join('')}
 </div>
 <a href="https://fragment.com/gifts" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#808090;font-size:13px;font-weight:700">🔗 Fragment.com</a>
 </div>`;
@@ -1996,10 +2005,6 @@ function startSplashWhenReady() {
 
 init();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fe96e403a04eebe',t:'MTc3OTI2MDA3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ff3df928ac7eecd',t:'MTc3OTM2OTU3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a006c6ee7bba23b0',t:'MTc3OTU2Nzc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a013c6f79831bf32',t:'MTc3OTcwNDEwOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a013cba76b17bf32',t:'MTc3OTcwNDMwMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
 </html>
