@@ -124,51 +124,58 @@ body {
 }
 
 
-/* --- Arena v12: Pro Trader Charts --- */
-.chart-container {
-    position: relative;
+/* --- Arena v13: Pro Terminal UI --- */
+.sparkline-v13 {
     width: 100%;
-    height: 180px;
-    margin: 15px 0;
-    cursor: crosshair;
-}
-
-.chart-tooltip {
-    position: absolute;
+    height: 30px;
+    margin-top: 5px;
     pointer-events: none;
-    background: rgba(20, 20, 35, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 6px 10px;
-    border-radius: 10px;
-    font-size: 11px;
-    z-index: 100;
-    display: none;
-    backdrop-filter: blur(10px);
 }
 
-.chart-crosshair-v {
-    position: absolute;
-    top: 0; bottom: 0;
-    width: 1px;
-    background: rgba(255, 255, 255, 0.2);
-    display: none;
-}
-
-/* Fullscreen Chart Modal */
-.trade-modal {
+.trade-modal-v13 {
     position: fixed;
     inset: 0;
-    z-index: 2000;
+    z-index: 9999;
     background: #080810;
     display: none;
     flex-direction: column;
-    animation: fadeIn 0.3s ease;
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.market-card-sparkline {
+.chart-main-v13 {
     width: 100%;
-    height: 40px;
-    margin-top: 10px;
+    height: 250px;
+    position: relative;
+    background: radial-gradient(circle at 50% 50%, rgba(124,92,255,0.05) 0%, transparent 80%);
+}
+
+.chart-info-panel {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 20px;
+}
+
+.chart-stat-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    padding: 12px;
+}
+
+.timeframe-btn {
+    padding: 8px 16px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+    color: #808090;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid transparent;
+}
+.timeframe-btn.active {
+    background: rgba(124,92,255,0.15);
+    border-color: rgba(124,92,255,0.3);
+    color: #a480ff;
 }
 
 </style>
@@ -1125,7 +1132,7 @@ function go(tab) {
   if(tab==='wheel')renderWheel();
 }
 
-function openDetail(slug){showNav();requestAnimationFrame(()=>moveNavPill(curTab));detailSlug=slug;['pg-market','pg-news','pg-prof','pg-wheel'].forEach(x=>{const e=document.getElementById(x);if(e)e.style.display='none';});document.getElementById('pg-detail').style.display='block';renderDetail(slug); fetchHistory(slug).then(() => renderProChart(slug, 'main-detail-chart', 24));}
+function openDetail(slug){showNav();requestAnimationFrame(()=>moveNavPill(curTab));detailSlug=slug;['pg-market','pg-news','pg-prof','pg-wheel'].forEach(x=>{const e=document.getElementById(x);if(e)e.style.display='none';});document.getElementById('pg-detail').style.display='block';renderDetail(slug); fetchHistory(slug).then(() => { drawSparkline(slug, 'detail-mini-chart'); });}
 function closeDetail(){document.getElementById('pg-detail').style.display='none';go(['market','news','prof'].includes(curTab)?curTab:'market');}
 
 // ═══ MARKET PAGE ═══
@@ -1179,120 +1186,127 @@ function renderMarket() {
 
 
 
-function renderProChart(slug, containerId, period = 24, isFull = false) {
-    const container = document.getElementById(containerId);
+let currentChartTimeframe = 24;
+
+function drawSparkline(slug, canvasId) {
+    const container = document.getElementById(canvasId);
+    if (!container) return;
+    const pts = histories[slug] || [];
+    if (pts.length < 2) return;
+
+    const lastPoints = pts.slice(-20);
+    const W = container.offsetWidth || 100;
+    const H = container.offsetHeight || 30;
+    const pricesArr = lastPoints.map(p => p.price);
+    const minP = Math.min(...pricesArr);
+    const maxP = Math.max(...pricesArr);
+    const range = (maxP - minP) || 0.1;
+
+    const color = lastPoints[lastPoints.length-1].price >= lastPoints[0].price ? '#22d47a' : '#ff4d6a';
+    const poly = lastPoints.map((p, i) => `${(i * (W / (lastPoints.length - 1))).toFixed(1)},${(H - ((p.price - minP) / range) * (H * 0.8) - 2).toFixed(1)}`).join(' ');
+
+    container.innerHTML = `<svg width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible">
+        <path d="M ${poly}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+}
+
+function renderDetailedChart(slug, timeframe = 24) {
+    currentChartTimeframe = timeframe;
+    const container = document.getElementById('main-terminal-chart');
     if (!container) return;
 
     let pts = histories[slug] || [];
-    const cutoff = Date.now() - period * 3600000;
-    if (period < 9999) {
-        pts = pts.filter(p => p.time >= cutoff);
-    }
+    const cutoff = Date.now() - timeframe * 3600000;
+    if (timeframe < 9999) pts = pts.filter(p => p.time >= cutoff);
     
     if (pts.length < 2) {
-        container.innerHTML = '<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#404060; font-size:12px;">Загрузка данных...</div>';
+        container.innerHTML = '<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#404060;">Накапливаем данные...</div>';
         return;
     }
 
     const W = container.offsetWidth;
     const H = container.offsetHeight;
-    const pricesArr = pts.map(p => p.price);
-    const minP = Math.min(...pricesArr);
-    const maxP = Math.max(...pricesArr);
-    const range = (maxP - minP) || 0.1;
+    const pArr = pts.map(p => p.price);
+    const min = Math.min(...pArr), max = Math.max(...pArr), range = (max - min) || 0.1;
+    const getX = (i) => i * (W / (pts.length - 1));
+    const getY = (p) => H - ((p - min) / range) * (H * 0.7) - (H * 0.15);
 
-    const getX = (i) => (i * (W / (pts.length - 1)));
-    const getY = (p) => H - ((p - minP) / range) * (H * 0.7) - (H * 0.15);
-
-    const points = pts.map((p, i) => `${getX(i)},${getY(p.price)}`).join(' ');
-    const firstPoint = getY(pts[0].price);
-    const lastPoint = getY(pts[pts.length - 1].price);
     const color = pts[pts.length-1].price >= pts[0].price ? '#22d47a' : '#ff4d6a';
+    const pathData = pts.map((p, i) => `${getX(i)},${getY(p.price)}`).join(' ');
 
     container.innerHTML = `
-        <div class="chart-tooltip" id="tooltip-${containerId}"></div>
-        <div class="chart-crosshair-v" id="cross-${containerId}"></div>
-        <svg width="${W}" height="${H}" style="overflow:visible;">
-            <defs>
-                <linearGradient id="grad-${containerId}" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
-                    <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
-                </linearGradient>
-            </defs>
-            <path d="M 0,${H} L ${points} L ${W},${H} Z" fill="url(#grad-${containerId})"/>
-            <path d="M ${points}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle id="dot-${containerId}" cx="${getX(pts.length-1)}" cy="${lastPoint}" r="4" fill="${color}"/>
+        <div id="chart-cursor" style="position:absolute; top:0; bottom:0; width:1px; background:rgba(255,255,255,0.2); display:none; pointer-events:none;"></div>
+        <div id="chart-label" style="position:absolute; background:rgba(0,0,0,0.8); padding:5px 10px; border-radius:8px; font-size:12px; display:none; pointer-events:none; border:1px solid #333; z-index:10;"></div>
+        <svg width="100%" height="100%" style="overflow:visible">
+            <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.2"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+            <path d="M 0,${H} L ${pathData} L ${W},${H} Z" fill="url(#g)"/>
+            <path d="M ${pathData}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
     `;
 
-    // Интерактив (Crosshair)
     container.onmousemove = (e) => {
-        const rect = container.getBoundingClientRect();
-        const x = e.clientX - rect.left;
+        const x = e.offsetX;
         const idx = Math.round(x / (W / (pts.length - 1)));
-        const data = pts[Math.max(0, Math.min(pts.length - 1, idx))];
-        
-        const tip = document.getElementById(`tooltip-${containerId}`);
-        const cross = document.getElementById(`cross-${containerId}`);
-        const dot = document.getElementById(`dot-${containerId}`);
+        const point = pts[Math.max(0, Math.min(pts.length - 1, idx))];
+        if(!point) return;
 
-        if(data && tip && cross) {
-            tip.style.display = 'block';
-            tip.style.left = Math.min(x, W - 80) + 'px';
-            tip.style.top = getY(data.price) - 40 + 'px';
-            tip.innerHTML = `<strong>${data.price.toFixed(2)} TON</strong><br>${new Date(data.time).toLocaleTimeString()}`;
-            
-            cross.style.display = 'block';
-            cross.style.left = x + 'px';
-            
-            if(dot) {
-                dot.setAttribute('cx', getX(Math.max(0, Math.min(pts.length - 1, idx))));
-                dot.setAttribute('cy', getY(data.price));
-            }
-        }
+        const cursor = document.getElementById('chart-cursor');
+        const label = document.getElementById('chart-label');
+        cursor.style.display = 'block'; cursor.style.left = x + 'px';
+        label.style.display = 'block'; label.style.left = Math.min(x + 10, W - 100) + 'px'; label.style.top = getY(point.price) - 50 + 'px';
+        label.innerHTML = `<span style="color:${color}">${point.price.toFixed(2)} TON</span><br><span style="font-size:10px; opacity:0.5">${new Date(point.time).toLocaleTimeString()}</span>`;
     };
-
+    
     container.onmouseleave = () => {
-        document.getElementById(`tooltip-${containerId}`).style.display = 'none';
-        document.getElementById(`cross-${containerId}`).style.display = 'none';
+        document.getElementById('chart-cursor').style.display = 'none';
+        document.getElementById('chart-label').style.display = 'none';
     };
 }
 
-function openTradeTerminal(slug) {
+function openDetailedTerminal(slug) {
     const g = GIFTS.find(x => x.slug === slug);
-    const modal = document.createElement('div');
-    modal.className = 'trade-modal';
-    modal.id = 'trade-terminal';
+    const p = prices[slug] || {floor:0, change24h:0, vol24h:0};
+    
+    let modal = document.getElementById('trade-terminal-v13');
+    if(!modal) {
+        modal = document.createElement('div');
+        modal.id = 'trade-terminal-v13';
+        modal.className = 'trade-modal-v13';
+        document.body.appendChild(modal);
+    }
+    
     modal.style.display = 'flex';
     modal.innerHTML = `
-        <div style="padding: 20px; display:flex; align-items:center; gap:15px; border-bottom:1px solid #1a1a2e;">
-            <button onclick="this.parentElement.parentElement.remove()" style="font-size:24px; color:#fff;">✕</button>
-            <img src="https://fragment.com/file/gifts/${slug}/thumb.webp" style="width:40px; height:40px;">
-            <div>
-                <div style="font-size:18px; font-weight:900;">${g.name}</div>
-                <div style="font-size:12px; color:#22d47a;">Live Terminal</div>
+        <div style="padding: 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <img src="https://fragment.com/file/gifts/${slug}/thumb.webp" style="width:44px; height:44px;">
+                <div><div style="font-size:18px; font-weight:900;">${g.name}</div><div style="font-size:11px; color:#22d47a;">Live Terminal</div></div>
             </div>
+            <button onclick="document.getElementById('trade-terminal-v13').style.display='none'" style="width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.05); color:#fff; font-size:18px;">✕</button>
         </div>
-        <div style="flex:1; padding:20px;">
-            <div id="full-chart" style="width:100%; height:300px; background:rgba(255,255,255,0.02); border-radius:20px; overflow:hidden;"></div>
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                ${[1, 6, 24, 168].map(h => `<button onclick="renderProChart('${slug}', 'full-chart', ${h}, true)" style="flex:1; padding:10px; background:rgba(255,255,255,0.05); border-radius:12px; color:#fff; font-size:12px; font-weight:700;">${h}H</button>`).join('')}
-            </div>
-            <div style="margin-top:30px;" id="order-book">
-                <div style="font-size:13px; font-weight:800; color:rgba(255,255,255,0.4); margin-bottom:15px;">MARKET DEPTH</div>
-                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px; color:#ff4d6a;"><span>3.10</span><span>4.2K TON</span></div>
-                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px; color:#ff4d6a;"><span>3.05</span><span>1.1K TON</span></div>
-                <div style="font-size:18px; font-weight:900; text-align:center; margin:15px 0; color:#fff;">${prices[slug]?.floor.toFixed(2)} <i class="ton-icon-img"></i></div>
-                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px; color:#22d47a;"><span>2.95</span><span>8.5K TON</span></div>
-                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px; color:#22d47a;"><span>2.90</span><span>12K TON</span></div>
-            </div>
+        
+        <div style="padding: 20px 20px 10px; display:flex; justify-content:space-between; align-items:flex-end;">
+            <div><div style="font-size:12px; opacity:0.4; margin-bottom:4px;">ТЕКУЩАЯ ЦЕНА</div><div style="font-size:32px; font-weight:950; letter-spacing:-1px;">${p.floor.toFixed(2)} <span style="font-size:14px; opacity:0.3;">TON</span></div></div>
+            <div style="text-align:right;"><div style="font-size:18px; font-weight:800; color:${p.change24h>=0?'#22d47a':'#ff4d6a'}">${p.change24h>=0?'+':''}${p.change24h}%</div><div style="font-size:10px; opacity:0.4;">за 24ч</div></div>
         </div>
-        <div style="padding:20px; padding-bottom:40px;">
-            <button onclick="window.open('https://fragment.com/gifts/${slug}')" style="width:100%; padding:18px; border-radius:20px; background:#7c5cff; color:#fff; font-size:16px; font-weight:900; border:none; box-shadow:0 10px 30px rgba(124,92,255,0.4);">ОТКРЫТЬ НА FRAGMENT</button>
+
+        <div id="main-terminal-chart" class="chart-main-v13"></div>
+
+        <div style="display:flex; gap:8px; padding: 0 20px;">
+            ${[1, 6, 24, 168, 9999].map(h => `<button class="timeframe-btn ${h === currentChartTimeframe ? 'active' : ''}" onclick="renderDetailedChart('${slug}', ${h}); this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active')); this.classList.add('active');">${h === 9999 ? 'ALL' : h + 'H'}</button>`).join('')}
+        </div>
+
+        <div class="chart-info-panel">
+            <div class="chart-stat-card"><div style="font-size:10px; opacity:0.4; margin-bottom:5px;">ОБЪЕМ 24Ч</div><div style="font-size:15px; font-weight:800;">${p.vol24h.toFixed(0)} TON</div></div>
+            <div class="chart-stat-card"><div style="font-size:10px; opacity:0.4; margin-bottom:5px;">ЛИСТИНГИ</div><div style="font-size:15px; font-weight:800;">${p.listed || 0} шт</div></div>
+        </div>
+
+        <div style="padding: 20px; margin-top:auto; padding-bottom:40px;">
+            <button onclick="window.open('https://fragment.com/gifts/${slug}')" style="width:100%; padding:18px; border-radius:22px; background:var(--accent); color:#fff; font-size:16px; font-weight:900; border:none; box-shadow: 0 10px 30px rgba(124,92,255,0.4);">КУПИТЬ НА FRAGMENT</button>
         </div>
     `;
-    document.body.appendChild(modal);
-    renderProChart(slug, 'full-chart', 24, true);
+    
+    renderDetailedChart(slug, 24);
 }
 
 function renderGrid() {
@@ -1309,7 +1323,7 @@ function renderGrid() {
     return 0;
   });
   if(!list.length){gr.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px;color:#404060"><div style="font-size:36px;margin-bottom:10px">🔍</div><div>Ничего не найдено</div></div>`;return;}
-  setTimeout(() => { list.forEach(g => renderProChart(g.slug, "spark-"+g.slug, 24)); }, 100); gr.innerHTML=list.map((g,i)=>{
+  setTimeout(() => { list.forEach(g => drawSparkline(g.slug, "spark-"+g.slug)); }, 50); gr.innerHTML=list.map((g,i)=>{
     const p=prices[g.slug]||{floor:0,change24h:0,vol24h:0};
     const up=p.change24h>=0,usd=(p.floor*tonUsd).toFixed(0);
     return `<div class="gcard" onclick="openDetail('${g.slug}')" style="animation:fadeUp .2s ease ${i*.025}s both">
@@ -1322,13 +1336,12 @@ ${p.sales24h>0?`<div style="position:absolute;top:8px;right:8px;z-index:2;backgr
 <div style="padding:9px 10px 10px;flex:1;display:flex;flex-direction:column;gap:7px">
   <div style="font-size:12px;font-weight:700;color:#e0e0ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</div>
   
-  <div class="price-box" style="border-radius:12px;padding:8px;background:rgba(0,0,0,0.3)">
-    <div style="font-size:16px;font-weight:950;color:#fff;"><i class="ton-icon-img"></i>${p.floor.toFixed(2)}</div>
-    <div id="spark-${g.slug}" class="market-card-sparkline"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">
-      <div style="font-size:10px;font-weight:800;color:${up?'#22d47a':'#ff4d6a'}">${up?'▲':'▼'} ${Math.abs(p.change24h)}%</div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.3)">VOL: ${p.vol24h.toFixed(0)}</div>
+  <div class="price-box" style="border-radius:14px;padding:10px;background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.03);">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-size:17px;font-weight:950;color:#fff;"><i class="ton-icon-img"></i>${p.floor.toFixed(2)}</div>
+        <div style="font-size:10px;font-weight:800;color:${up?'#22d47a':'#ff4d6a'}">${up?'+':''}${p.change24h}%</div>
     </div>
+    <div id="spark-${g.slug}" class="sparkline-v13"></div>
   </div>
 </div>
   </div>
@@ -1414,7 +1427,7 @@ function dtChart(g){
 <div style="display:flex;gap:5px;margin-bottom:12px;justify-content:flex-end;flex-wrap:wrap">
 ${perBtns.map(({l,hh})=>`<button onclick="detailPeriod=${hh};dtab('chart')" style="padding:4px 11px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;background:${detailPeriod===hh?'rgba(124,92,255,.25)':'rgba(255,255,255,.04)'};border:${detailPeriod===hh?'1px solid rgba(124,92,255,.5)':'1px solid transparent'};color:${detailPeriod===hh?'#a480ff':'#606080'}">${l}</button>`).join('')}
 </div>
-<div id="main-detail-chart" class="chart-container" onclick="openTradeTerminal('${g.slug}')"></div>
+<div id="detail-mini-chart" style="width:100%; height:150px;" onclick="openDetailedTerminal('${g.slug}')"></div>
 <div style="margin-top:12px;background:rgba(255,255,255,.03);border-radius:12px;padding:11px 13px;border:1px solid rgba(255,255,255,.05)">
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
 <div style="text-align:center"><div style="font-size:9px;color:#404060;margin-bottom:2px">Точек</div><div style="font-size:13px;font-weight:800;color:#a0a0c0">${h.length}</div></div>
@@ -2107,6 +2120,6 @@ function startSplashWhenReady() {
 
 init();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0136c29cc8c0282',t:'MTc3OTcwMDM4OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-</body>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0137e85eb670282',t:'MTc3OTcwMTE0MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
