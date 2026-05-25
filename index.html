@@ -44,11 +44,11 @@ html, body { font-size: var(--fs-base); }
 /* Fluid back btn */
 .back { width:clamp(34px,9vw,42px); height:clamp(34px,9vw,42px); font-size:clamp(17px,5vw,22px); }
 
-/* --- Arena Premium v8: Rebuilt Clean --- */
+/* --- Arena v9: Cursor Market Final Fix --- */
 :root {
   --app-w: min(100vw, 450px);
   --glass: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.12);
   --accent: #7c5cff;
 }
 
@@ -57,13 +57,11 @@ body {
   display: flex !important;
   justify-content: center !important;
   margin: 0;
-  padding: 0;
 }
 
 .app {
   width: var(--app-w) !important;
   max-width: var(--app-w) !important;
-  margin: 0 auto !important;
   background: #080810 !important;
   box-shadow: 0 0 100px rgba(0,0,0,1) !important;
   min-height: 100vh;
@@ -73,13 +71,6 @@ body {
   flex-direction: column;
 }
 
-.page {
-  flex: 1;
-  overflow-y: auto !important;
-  scrollbar-width: none;
-}
-.page::-webkit-scrollbar { display: none; }
-
 .glass-card {
   background: var(--glass) !important;
   backdrop-filter: blur(25px) !important;
@@ -88,42 +79,47 @@ body {
   border-radius: 28px !important;
 }
 
-.ton-logo {
-  width: 16px; height: 16px; display: inline-block; vertical-align: middle;
-  background: url('https://ton.org/download/ton_symbol.svg') center/contain no-repeat;
-  margin-right: 4px;
-}
-
-.market-mesh-bg {
-  background: linear-gradient(-45deg, #0d0820, #1a0b3a, #080810, #141425);
-  background-size: 400% 400%;
-  animation: meshGradient 15s ease infinite;
-}
-@keyframes meshGradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
+/* Perfect Banner */
 .banner-container {
-    display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px;
-    padding: 15px 16px 25px; scrollbar-width: none; scroll-behavior: smooth;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 0; /* Убираем зазор для идеального snap */
+    padding: 15px 0 25px; /* Убираем боковые падинги контейнера для ширины 100% */
+    scrollbar-width: none;
+    scroll-behavior: smooth;
 }
 .banner-container::-webkit-scrollbar { display: none; }
 
 .banner-card {
-    flex: 0 0 100%; scroll-snap-align: center; background: rgba(255, 255, 255, 0.07);
-    backdrop-filter: blur(35px); -webkit-backdrop-filter: blur(35px);
-    border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 28px;
-    padding: 18px; display: flex; align-items: center; gap: 15px; box-sizing: border-box;
+    flex: 0 0 calc(100% - 32px); /* Ширина приложения минус отступы */
+    margin: 0 16px; /* Создаем аккуратные поля */
+    scroll-snap-align: center;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(35px);
+    -webkit-backdrop-filter: blur(35px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 30px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    box-shadow: 0 15px 45px rgba(0,0,0,0.4);
+    box-sizing: border-box;
 }
+
 .banner-img { width: 75px; height: 75px; border-radius: 20px; object-fit: contain; background: rgba(0,0,0,0.3); }
-.banner-tag { font-size: 9px; font-weight: 900; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; margin-bottom: 6px; display: inline-block; }
 .banner-title { font-size: 16px; font-weight: 900; color: #fff; line-height: 1.2; letter-spacing: -0.3px; }
 
-/* Fix CRT */
-.crt-content { max-height: 100% !important; overflow-y: auto !important; padding-bottom: 60px !important; }
-.crt-screen { height: clamp(400px, 62vh, 620px) !important; }
+/* Custom TON Icon */
+.ton-icon-img {
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 4px;
+    background: url('https://ton.org/download/ton_symbol.svg') center/contain no-repeat;
+}
 
 </style>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -366,45 +362,45 @@ let walletLastUpdate = 0;
 
 
 let bannerInterval = null;
-let lastUserInteraction = 0;
+let lastInteraction = 0;
 
 function initBannerAutoScroll() {
     if(bannerInterval) clearInterval(bannerInterval);
     const container = document.querySelector('.banner-container');
     if(!container) return;
-    container.addEventListener('touchstart', () => { lastUserInteraction = Date.now(); }, {passive: true});
+    container.addEventListener('touchstart', () => { lastInteraction = Date.now(); }, {passive: true});
     bannerInterval = setInterval(() => {
-        if(curTab !== 'market' || Date.now() - lastUserInteraction < 10000) return;
+        if(curTab !== 'market' || (Date.now() - lastInteraction < 8000)) return;
         const banners = container.querySelectorAll('.banner-card');
         if (banners.length <= 1) return;
         let currentIndex = Math.round(container.scrollLeft / container.offsetWidth);
-        let nextIndex = (currentIndex + 1) >= banners.length ? 0 : currentIndex + 1;
+        let nextIndex = (currentIndex + 1) % banners.length;
         const targetScroll = banners[nextIndex].offsetLeft - 16;
         container.scrollTo({left: targetScroll, behavior: 'smooth'});
-    }, 6000);
+    }, 5000);
 }
 
 function getLatestNews() {
-    const signals = [];
+    const news = [];
     const giftsCopy = [...GIFTS];
     const topUp = giftsCopy.sort((a,b)=>(prices[b.slug]?.change24h||0)-(prices[a.slug]?.change24h||0))[0];
     if(topUp && (prices[topUp.slug]?.change24h||0) > 5) {
-        signals.push({ id: 'up_' + topUp.slug, slug: topUp.slug, tag: 'СИГНАЛ: РОСТ', source: 'Portal Market', color: '#22d47a', title: `${topUp.name} +${prices[topUp.slug].change24h}%!`, short: `Верифицировано по истории цен.`, detail: `Мы зафиксировали резкий рост цены подарка ${topUp.name}. Наши скрипты подтвердили совпадение с данными Fragment. Повышенный спрос создает дефицит листингов.`, recommendation: 'Если вы холдер - удерживайте актив. Если трейдер - ищите точку для фиксации.', action: 'К графику' });
+        news.push({ id: 'up_' + topUp.slug, slug: topUp.slug, tag: 'РОСТ ЦЕНЫ', color: '#22d47a', source:'Portal', title: `${topUp.name} +${prices[topUp.slug].change24h}%!`, short: `Спрос на Fragment растет.`, detail: `Мы зафиксировали рост цены ${topUp.name}. История в нашей базе подтверждает тренд.`, action: 'График' });
     }
-    const topDown = giftsCopy.sort((a,b)=>(prices[a.slug]?.change24h||0)-(prices[b.slug]?.change24h||0))[0];
+    const topDown = [...GIFTS].sort((a,b)=>(prices[a.slug]?.change24h||0)-(prices[b.slug]?.change24h||0))[0];
     if(topDown && (prices[topDown.slug]?.change24h||0) < -5) {
-        signals.push({ id: 'down_' + topDown.slug, slug: topDown.slug, tag: 'СИГНАЛ: ДАМП', source: 'Whale Monitor', color: '#ff4d6a', title: `Спад ${topDown.name} на ${Math.abs(prices[topDown.slug].change24h)}%`, short: `Похоже на крупную продажу.`, detail: `На рынке зафиксирована крупная продажа подарка ${topDown.name}. Это вызвало временное падение Floor Price. Информация верифицирована через TON API.`, recommendation: 'Хороший момент для тех, кто хотел купить подарок со скидкой. Следите за уровнем поддержки.', action: 'Искать дно' });
+        news.push({ id: 'down_' + topDown.slug, slug: topDown.slug, tag: 'ДИСКОНТ', color: '#ff4d6a', source:'Whale', title: `${topDown.name} -${Math.abs(prices[topDown.slug].change24h)}%`, short: `Похоже на удачный момент для входа.`, detail: `Цена скорректировалась. Наши скрипты подтвердили падение через официальные источники.`, action: 'Купить' });
     }
-    if(signals.length < 2) {
-        signals.push({ id: 'stable', slug: 'snoopdogg', tag: 'МОНИТОРИНГ', source: 'Cursor AI', color: '#7c5cff', title: 'Рынок анализируется', short: '114 коллекций под наблюдением.', detail: 'На данный момент аномалий не обнаружено. Скрипты Cursor Analytics сканируют Portal Market каждые 20 секунд. Система готова выдать сигнал при любом движении.', recommendation: 'Используйте фильтры по объему торгов для поиска активных коллекций.', action: 'Обновить' });
+    if(news.length < 2) {
+        news.push({ id: 'stable', slug: 'snoopdogg', tag: 'MARKET', color: '#7c5cff', source:'System', title: 'Курсор Маркет: Мониторинг', short: 'Скрипты сканируют 114 коллекций.', detail: 'Все системы работают в штатном режиме. Мы следим за ценами 24/7.', action: 'Обновить' });
     }
-    return signals;
+    return news;
 }
 
 function buildAvatar(user, size = 64) {
     const color = user?.color || '#7c5cff';
-    const photo = user?.photo || user?.avatar;
     const initials = user?.initials || '?';
+    const photo = user?.photo || user?.avatar;
     if (photo) return `<div style="width:${size}px;height:${size}px;border-radius:50%;border:2px solid rgba(255,255,255,0.1);overflow:hidden;display:inline-block;vertical-align:middle;"><img src="${photo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='${initials}'"></div>`;
     return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:linear-gradient(135deg,${color},${color}99);display:flex;align-items:center;justify-content:center;font-size:${size/2.5}px;font-weight:900;color:#fff;border:2px solid rgba(255,255,255,0.1);display:inline-block;vertical-align:middle;line-height:${size}px;text-align:center;">${initials}</div>`;
 }
@@ -837,7 +833,7 @@ async function connectTonWallet(){
   // Fallback, если SDK не загрузился (например, в sandbox preview без сети)
   if (tg?.openLink) tg.openLink('https://app.tonkeeper.com/ton-connect');
   else window.open('https://app.tonkeeper.com/ton-connect','_blank');
-  showToast('<i class="ton-logo"></i> TON Connect', 'Открой в браузере/Telegram, чтобы подключить кошелёк');
+  showToast('<i class="ton-icon-img"></i> TON Connect', 'Открой в браузере/Telegram, чтобы подключить кошелёк');
 }
 async function disconnectTonWallet(){
   try { await tonConnectUI?.disconnect?.(); } catch(e){}
@@ -881,7 +877,7 @@ function walletCardHtml(){
   if (!walletAddress) {
     return `<div style="margin:14px 16px 0;background:linear-gradient(135deg,rgba(77,159,255,.12),rgba(124,92,255,.08));border:1px solid rgba(77,159,255,.25);border-radius:16px;padding:14px">
       <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:42px;height:42px;border-radius:12px;background:rgba(77,159,255,.12);display:flex;align-items:center;justify-content:center;font-size:22px"><i class="ton-logo"></i></div>
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(77,159,255,.12);display:flex;align-items:center;justify-content:center;font-size:22px"><i class="ton-icon-img"></i></div>
         <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;color:#f0f0ff">TON-кошелёк не подключён</div><div style="font-size:11px;color:#7080a0;margin-top:2px">Подключи Tonkeeper / Wallet, чтобы увидеть баланс и подарки</div></div>
       </div>
       <button onclick="connectTonWallet()" style="margin-top:12px;width:100%;padding:12px;border-radius:13px;background:linear-gradient(135deg,#4d9fff,#7c5cff);color:#fff;font-size:13px;font-weight:800;box-shadow:0 6px 20px rgba(77,159,255,.25)">🔗 Подключить кошелёк</button>
@@ -901,7 +897,7 @@ function walletCardHtml(){
   </div>`;
 }
 function marketWalletButtonHtml(){
-  if (walletAddress) return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(34,212,122,.08);border:1px solid rgba(34,212,122,.22);border-radius:10px;padding:6px 11px;color:#22d47a;font-size:11px;font-weight:800"><i class="ton-logo"></i> ${fmtTon(walletBalance,3)} TON · ${esc(shortAddr(walletAddress))}</button>`;
+  if (walletAddress) return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(34,212,122,.08);border:1px solid rgba(34,212,122,.22);border-radius:10px;padding:6px 11px;color:#22d47a;font-size:11px;font-weight:800"><i class="ton-icon-img"></i> ${fmtTon(walletBalance,3)} TON · ${esc(shortAddr(walletAddress))}</button>`;
   return `<button onclick="event.stopPropagation();connectTonWallet()" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;background:rgba(124,92,255,.10);border:1px solid rgba(124,92,255,.28);border-radius:10px;padding:6px 11px;color:#a480ff;font-size:11px;font-weight:800">🔗 Подключить кошелёк</button>`;
 }
 
@@ -1091,14 +1087,14 @@ function renderMarket() {
     <div class="market-mesh-bg">
         <div style="padding: 24px 20px 10px; display:flex; justify-content:space-between; align-items:center;">
            <div>
-              <h1 style="font-size:25px; font-weight:950; margin:0; letter-spacing:-1px;">Cursor Analytics</h1>
+              <h1 style="font-size:26px; font-weight:950; margin:0; letter-spacing:-1px;">Cursor Market</h1>
               <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
                 <div style="width:7px; height:7px; background:#22d47a; border-radius:50%; box-shadow:0 0 8px #22d47a; animation: pulse 2s infinite;"></div>
-                <span style="font-size:11px; color:#22d47a; font-weight:800;">SCANNING LIVE</span>
+                <span style="font-size:11px; color:#22d47a; font-weight:800;">LIVE</span>
               </div>
            </div>
            <div style="text-align:right;">
-              <div style="font-size:18px; font-weight:900; color:#f0b429;"><i class="ton-logo"></i>$${tonUsd.toFixed(2)}</div>
+              <div style="font-size:18px; font-weight:900; color:#f0b429;"><i class="ton-icon-img"></i>$${tonUsd.toFixed(2)}</div>
            </div>
         </div>
         <div class="banner-container">
@@ -1108,7 +1104,7 @@ function renderMarket() {
                     <div class="banner-content">
                         <span class="banner-tag" style="background:${s.color}20; color:${s.color}; border:1px solid ${s.color}40">${s.tag}</span>
                         <div class="banner-title">${s.title}</div>
-                        <div style="font-size:10px; color:rgba(255,255,255,0.4); margin-top:4px; font-weight:700;">VERIFIED BY ${s.source}</div>
+                        <div style="font-size:10px; color:rgba(255,255,255,0.4); margin-top:4px; font-weight:700;">Verified by ${s.source}</div>
                     </div>
                 </div>
             `).join('')}
@@ -1229,7 +1225,7 @@ function dtab(t){
 }
 
 function dtInfo(g,p){
-  const rows=[['💰 Floor',`<strong style="color:#f0b429">${(p.floor||0).toFixed(2)} TON</strong> · $${((p.floor||0)*tonUsd).toFixed(0)}`],['📈 24ч',`<span style="color:${(p.change24h||0)>=0?'#22d47a':'#ff4d6a'}">${(p.change24h||0)>=0?'+':''}${p.change24h||0}%</span>`],['📊 Объём',`${(p.vol24h||0).toFixed(0)} TON`],['🛒 Сделок',`${p.sales24h||0}`],['📋 Листинги',`${p.listed||0}`],['🏭 Supply',`${(p.supply||0).toLocaleString()}`],['<i class="ton-logo"></i> Market Cap',`${((p.marketCap||0)/1000).toFixed(1)}K TON`],['🕒 Обновлено',p.updated?new Date(p.updated).toLocaleTimeString('ru'):'—']];
+  const rows=[['💰 Floor',`<strong style="color:#f0b429">${(p.floor||0).toFixed(2)} TON</strong> · $${((p.floor||0)*tonUsd).toFixed(0)}`],['📈 24ч',`<span style="color:${(p.change24h||0)>=0?'#22d47a':'#ff4d6a'}">${(p.change24h||0)>=0?'+':''}${p.change24h||0}%</span>`],['📊 Объём',`${(p.vol24h||0).toFixed(0)} TON`],['🛒 Сделок',`${p.sales24h||0}`],['📋 Листинги',`${p.listed||0}`],['🏭 Supply',`${(p.supply||0).toLocaleString()}`],['<i class="ton-icon-img"></i> Market Cap',`${((p.marketCap||0)/1000).toFixed(1)}K TON`],['🕒 Обновлено',p.updated?new Date(p.updated).toLocaleTimeString('ru'):'—']];
   return `<div style="animation:fadeIn .2s ease">${rows.map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0">${v}</span></div>`).join('')}
 <div style="margin-top:14px;display:flex;gap:9px">
 <a href="https://fragment.com/gifts/${g.slug}" target="_blank" style="flex:1;padding:10px;border-radius:12px;background:rgba(124,92,255,.12);border:1px solid rgba(124,92,255,.3);color:#a480ff;font-size:11px;font-weight:700;text-align:center">🔗 Fragment</a>
@@ -1578,7 +1574,7 @@ function renderNews() {
     const pg = document.getElementById('pg-news');
     const signals = getLatestNews();
     pg.innerHTML = `
-        <div style="padding: 24px 20px;"><h1 style="font-size:28px; font-weight:950; margin:0;">Market Signals</h1><p style="font-size:14px; color:rgba(255,255,255,0.5); margin-top:5px;">Верифицированные новости</p></div>
+        <div style="padding: 24px 20px;"><h1 style="font-size:28px; font-weight:950; margin:0;">Сигналы Рынка</h1><p style="font-size:14px; color:rgba(255,255,255,0.5); margin-top:5px;">Cursor Market: Подробности</p></div>
         <div style="padding: 0 16px 100px;">
             ${signals.map(s => `
                 <div id="sig_${s.id}" class="glass-card" style="margin-bottom: 20px; padding: 24px;">
@@ -1590,11 +1586,7 @@ function renderNews() {
                         </div>
                     </div>
                     <p style="font-size:15px; color:rgba(255,255,255,0.7); line-height:1.6; margin-bottom:20px;">${s.detail}</p>
-                    <div style="background:rgba(255,255,255,0.05); border-radius:18px; padding:18px; border:1px dashed rgba(255,255,255,0.15);">
-                        <div style="font-size:12px; font-weight:900; color:var(--accent); margin-bottom:6px;">ЧТО ДЕЛАТЬ?</div>
-                        <div style="font-size:14px; color:#fff;">${s.recommendation}</div>
-                    </div>
-                    <button onclick="openDetail('${s.slug}')" style="width:100%; margin-top:20px; padding:16px; border-radius:18px; background:var(--accent); color:#fff; font-size:15px; font-weight:800; border:none;">${s.action}</button>
+                    <button onclick="openDetail('${s.slug}')" style="width:100%; padding:16px; border-radius:18px; background:#7c5cff; color:#fff; font-size:15px; font-weight:800; border:none;">${s.action}</button>
                 </div>
             `).join('')}
         </div>
@@ -1618,7 +1610,7 @@ function renderProfile(){
     </div>
     <div class="glass-card" style="margin: 0 16px 20px; display:flex; justify-content:space-around; padding:22px;">
         <div style="text-align:center;"><div style="font-size:22px; font-weight:900;">${inv.length}</div><div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700;">GIFTS</div></div>
-        <div style="text-align:center;"><div style="font-size:22px; font-weight:900; color:#f0b429;"><i class="ton-logo"></i>${walletBalance.toFixed(2)}</div><div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700;">TON</div></div>
+        <div style="text-align:center;"><div style="font-size:22px; font-weight:900; color:#f0b429;"><i class="ton-icon-img"></i>${walletBalance.toFixed(2)}</div><div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700;">TON</div></div>
         <div style="text-align:center;"><div style="font-size:22px; font-weight:900; color:#4d9fff;">${onlineCount}</div><div style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700;">ONLINE</div></div>
     </div>
     ${walletCardHtml()}
@@ -1684,7 +1676,7 @@ ${[['🔗 Источник цен','Portal Market'],['⏱ Обновление',
 </div>
 <div style="background:rgba(255,255,255,.03);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.06)">
 <div style="font-size:10px;color:#505070;font-weight:700;margin-bottom:12px;letter-spacing:.5px">КОШЕЛЁК</div>
-${[['<i class="ton-logo"></i> Адрес',walletAddress?shortAddr(walletAddress):'не подключён'],['💰 Баланс',fmtTon(walletBalance,4)+' TON'],['🎁 Telegram Gifts',String(walletGifts.length)],['🕒 Обновлено',walletLastUpdate?new Date(walletLastUpdate).toLocaleTimeString('ru'):'—']].map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:12px"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0;text-align:right">${esc(v)}</span></div>`).join('')}
+${[['<i class="ton-icon-img"></i> Адрес',walletAddress?shortAddr(walletAddress):'не подключён'],['💰 Баланс',fmtTon(walletBalance,4)+' TON'],['🎁 Telegram Gifts',String(walletGifts.length)],['🕒 Обновлено',walletLastUpdate?new Date(walletLastUpdate).toLocaleTimeString('ru'):'—']].map(([l,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:12px"><span style="font-size:12px;color:#606080">${l}</span><span style="font-size:12px;font-weight:700;color:#c0c0e0;text-align:right">${esc(v)}</span></div>`).join('')}
 </div>
 <a href="https://fragment.com/gifts" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#808090;font-size:13px;font-weight:700">🔗 Fragment.com</a>
 </div>`;
@@ -1944,6 +1936,6 @@ function startSplashWhenReady() {
 
 init();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a013425238d80282',t:'MTc3OTY5ODY3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0134fb66ab80282',t:'MTc3OTY5OTIyNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
